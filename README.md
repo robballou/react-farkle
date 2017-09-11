@@ -1,5 +1,7 @@
 # React Farkle Game
 
+[![Build Status](https://travis-ci.org/robballou/react-farkle.svg?branch=master)](https://travis-ci.org/robballou/react-farkle)
+
 Using as my tutorial for learning React. [Find out more about Farkle](https://en.wikipedia.org/wiki/Farkle).
 
 Currently has:
