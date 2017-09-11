@@ -5,9 +5,14 @@ import PlayerRoll from './PlayerRoll';
 import Scoreboard from './Scoreboard';
 import Messages from './Messages';
 import NextPlayer from './NextPlayer';
+import TurnIndicator from './TurnIndicator';
+import TurnScoreboard from './TurnScoreboard';
+
+import {filterRoll} from '../utils/filters';
 
 import {
-  didFarkle
+  didFarkle,
+  score,
 } from '../utils/score';
 
 // - user rolls all the dice
@@ -48,16 +53,43 @@ export default class Game extends React.Component {
 
     this.state = {
       currentPlayer: 1,
+      currentMessage: 'Select "roll" to start your turn',
       dice: [],
+      roll: 1,
       selectedDie: [],
       diceRemaining: 6,
       messages: [],
+      turnScore: 0,
+      scoreboard: {
+        1: 0,
+        2: 0,
+      },
     };
+  }
+
+  /**
+   * Check if the player already selected the die in this turn.
+   */
+  alreadySelected(die) {
+    const thisRollsDice = filterRoll(this.state.roll, this.state.selectedDie);
+    const alreadySelected = thisRollsDice.filter((selected) => selected.index == die.index);
+    return alreadySelected.length > 0;
   }
 
   nextPlayer() {
     const next = (currentPlayer == 1) ? 2 : 1;
-    this.setState({currentPlayer: next, messages: [`Player ${this.state.currentPlayer}, select roll to start your turn`]});
+    this.setState({
+      turnScore: 0,
+      currentPlayer: next,
+      messages: [`Player ${this.state.currentPlayer}, select roll to start your turn`]
+    });
+  }
+
+  /**
+   * Remove the previously selected die.
+   */
+  removeSelected(die) {
+    return this.state.selectedDie.filter((selected) => !(selected.roll == this.state.roll && selected.index == die.index));
   }
 
   /**
@@ -69,9 +101,9 @@ export default class Game extends React.Component {
     return (
       <div>
         <div className="game">
-          <div className="turnIndicator">
-          Player {this.state.currentPlayer}
-          </div>
+          <TurnIndicator
+            player={this.state.currentPlayer}
+            message={this.state.currentMessage} />
           <Messages value={this.state.messages} />
           <div className="actions">
             {this.renderActions()}
@@ -79,7 +111,7 @@ export default class Game extends React.Component {
           <div className="roll">
             <PlayerRoll selected={this.state.selectedDie} value={this.state.dice} onClick={this.selectDie.bind(this)}/>
           </div>
-          <div className="selectedDie" />
+          <TurnScoreboard selected={this.state.selectedDie} value={this.state.turnScore} />
           <Scoreboard />
         </div>
       </div>
@@ -117,18 +149,21 @@ export default class Game extends React.Component {
     for (var i = 0; i < this.state.diceRemaining; i++) {
       newDice.push(getRandomIntInclusive(1,6));
     }
-    this.setState({dice: newDice});
+
+    const currentMessage = didFarkle(newDice) ? 'Farkled!' : 'Select die to score';
+    this.setState({dice: newDice, currentMessage, roll: ++this.state.roll });
     // this.updateActions();
   }
 
   selectDie(selected) {
     // check if this dice is al
-    const alreadySelected = (this.state.selectedDie.filter((die) => die.index == selected.index)).length > 0;
-    if (alreadySelected) {
-
+    if (this.alreadySelected(selected)) {
+      this.state.selectedDie = this.removeSelected(selected);
     }
-
-    this.state.selectedDie.push(selected);
-    this.setState({selectedDie: this.state.selectedDie});
+    else {
+      selected.roll = this.state.roll;
+      this.state.selectedDie.push(selected);
+    }
+    this.setState({selectedDie: this.state.selectedDie, turnScore: score(this.state.selectedDie)});
   }
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "./node_modules/.bin/ava",
     "webpack": "./node_modules/.bin/webpack",
-    "watch": "./node_modules/.bin/webpack --watch",
+    "watch": "./node_modules/.bin/webpack --watch"
   },
   "author": "Rob Ballou",
   "license": "ISC",
