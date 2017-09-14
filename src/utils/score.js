@@ -1,4 +1,4 @@
-import {isEqual, pickBy, toPairs, clone, concat, isNumber, keys} from 'lodash';
+import {isEqual, pickBy, toPairs, clone, concat, isNumber, keys, groupBy, forIn} from 'lodash';
 
 /**
  * Check if the player "farkled" (e.g. has no scoring die in a roll)
@@ -38,10 +38,22 @@ export function normalizeDice(dice) {
   });
 }
 
+export function score(allDiceRolls) {
+  const rolls = groupBy(allDiceRolls, (die) => (isNumber(die)) ? 0 : die.roll);
+  const thisScore = {score: 0, items: [], errors: []};
+  forIn(rolls, (dice, key) => {
+    const rollScore = scoreRoll(dice);
+    thisScore.score += rollScore.score;
+    thisScore.items = concat(thisScore.items, rollScore.items);
+    thisScore.errors = concat(thisScore.errors, rollScore.errors);
+  });
+  return thisScore;
+}
+
 /**
- * Score the dice roll.
+ * Score a single dice roll.
  */
-export function score(dice) {
+export function scoreRoll(dice) {
   const thisScore = {score: 0, items: [], errors: []};
   const thisDice = normalizeDice(dice);
 

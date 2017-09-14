@@ -19242,6 +19242,7 @@ exports.didFarkle = didFarkle;
 exports.dieCount = dieCount;
 exports.normalizeDice = normalizeDice;
 exports.score = score;
+exports.scoreRoll = scoreRoll;
 exports.scoreSpecials = scoreSpecials;
 exports.hasScoringSingleDie = hasScoringSingleDie;
 exports.getNumberOfAKind = getNumberOfAKind;
@@ -19296,10 +19297,24 @@ function normalizeDice(dice) {
   });
 }
 
+function score(allDiceRolls) {
+  var rolls = (0, _lodash.groupBy)(allDiceRolls, function (die) {
+    return (0, _lodash.isNumber)(die) ? 0 : die.roll;
+  });
+  var thisScore = { score: 0, items: [], errors: [] };
+  (0, _lodash.forIn)(rolls, function (dice, key) {
+    var rollScore = scoreRoll(dice);
+    thisScore.score += rollScore.score;
+    thisScore.items = (0, _lodash.concat)(thisScore.items, rollScore.items);
+    thisScore.errors = (0, _lodash.concat)(thisScore.errors, rollScore.errors);
+  });
+  return thisScore;
+}
+
 /**
- * Score the dice roll.
+ * Score a single dice roll.
  */
-function score(dice) {
+function scoreRoll(dice) {
   var thisScore = { score: 0, items: [], errors: [] };
   var thisDice = normalizeDice(dice);
 
@@ -32020,9 +32035,9 @@ var _react2 = _interopRequireDefault(_react);
 
 var _random = __webpack_require__(188);
 
-var _Roll = __webpack_require__(189);
+var _Actions = __webpack_require__(200);
 
-var _Roll2 = _interopRequireDefault(_Roll);
+var _Actions2 = _interopRequireDefault(_Actions);
 
 var _PlayerRoll = __webpack_require__(190);
 
@@ -32103,8 +32118,16 @@ var Game = function (_React$Component) {
     _this.state = {
       currentPlayer: 1,
       currentMessage: 'Select "roll" to start your turn',
+
+      // collection of dice values (e.g. the dot-values only)
       dice: [],
+
+      // collection of the dice available with some metdata about state
+      availableDice: [],
+
+      // roll count, used to help differentiate between die indices
       roll: 1,
+
       selectedDie: [],
       diceRemaining: 6,
       messages: [],
@@ -32175,16 +32198,17 @@ var Game = function (_React$Component) {
             player: this.state.currentPlayer,
             message: this.state.currentMessage }),
           _react2.default.createElement(_Messages2.default, { value: this.state.messages }),
-          _react2.default.createElement(
-            'div',
-            { className: 'actions' },
-            this.renderActions()
-          ),
-          _react2.default.createElement(
-            'div',
-            { className: 'roll' },
-            _react2.default.createElement(_PlayerRoll2.default, { selected: this.state.selectedDie, value: this.state.dice, onClick: this.selectDie.bind(this) })
-          ),
+          _react2.default.createElement(_Actions2.default, {
+            onRoll: this.roll.bind(this),
+            onNext: this.nextPlayer.bind(this),
+            gameState: this.state
+          }),
+          _react2.default.createElement(_PlayerRoll2.default, {
+            roll: this.state.roll,
+            selected: this.state.selectedDie,
+            value: this.state.dice,
+            farkled: this.state.farkled,
+            onClick: this.selectDie.bind(this) }),
           _react2.default.createElement(_TurnScoreboard2.default, { selected: this.state.selectedDie, value: this.state.turnScore }),
           _react2.default.createElement(_Scoreboard2.default, null)
         )
@@ -32216,7 +32240,7 @@ var Game = function (_React$Component) {
         return null;
       }
 
-      return _react2.default.createElement(_Roll2.default, { onClick: function onClick() {
+      return _react2.default.createElement(Roll, { onClick: function onClick() {
           return _this3.roll();
         } });
     }
@@ -32228,19 +32252,34 @@ var Game = function (_React$Component) {
   }, {
     key: 'roll',
     value: function roll() {
+      // user has dice in play right now?
+      if (this.state.dice.length !== 0) {
+        this.state.diceRemaining = this.state.dice.length - (0, _filters.filterRoll)(this.state.roll, this.state.selectedDie).length;
+        this.setState({ roll: ++this.state.roll, diceRemaining: this.state.diceRemaining });
+      }
+
       var newDice = [];
       for (var i = 0; i < this.state.diceRemaining; i++) {
         newDice.push((0, _random.getRandomIntInclusive)(1, 6));
       }
 
-      var currentMessage = (0, _score.didFarkle)(newDice) ? 'Farkled!' : 'Select die to score';
-      this.setState({ dice: newDice, currentMessage: currentMessage, roll: ++this.state.roll });
-      // this.updateActions();
+      var farkled = (0, _score.didFarkle)(newDice);
+      var currentMessage = farkled ? 'Farkled!' : 'Select die to score';
+      this.setState({
+        dice: newDice,
+        currentMessage: currentMessage,
+        farkled: farkled
+      });
     }
+
+    /**
+     * Player selected a die, so score it...
+     */
+
   }, {
     key: 'selectDie',
     value: function selectDie(selected) {
-      // check if this dice is al
+      // check if this dice is already selected
       if (this.alreadySelected(selected)) {
         this.state.selectedDie = this.removeSelected(selected);
       } else {
@@ -32316,17 +32355,19 @@ var Roll = function (_React$Component) {
   }
 
   _createClass(Roll, [{
-    key: "render",
+    key: 'render',
     value: function render() {
       var _this2 = this;
 
+      var title = this.props.title ? this.props.title : 'Roll';
+
       // calls the onClick property passed in via Game
       return _react2.default.createElement(
-        "button",
-        { className: "roll", onClick: function onClick() {
+        'button',
+        { className: 'roll', onClick: function onClick() {
             return _this2.props.onClick();
           } },
-        "Roll"
+        title
       );
     }
   }]);
@@ -32353,11 +32394,13 @@ var _react = __webpack_require__(10);
 
 var _react2 = _interopRequireDefault(_react);
 
+var _lodash = __webpack_require__(82);
+
 var _Die = __webpack_require__(191);
 
 var _Die2 = _interopRequireDefault(_Die);
 
-var _lodash = __webpack_require__(82);
+var _filters = __webpack_require__(199);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -32367,6 +32410,9 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+/**
+ * Represents a component containing a player's dice.
+ */
 var PlayerRoll = function (_React$Component) {
   _inherits(PlayerRoll, _React$Component);
 
@@ -32381,14 +32427,9 @@ var PlayerRoll = function (_React$Component) {
     value: function render() {
       var _this2 = this;
 
-      // if (this.state.die.length === 0) {
-      //   return null;
-      // }
-
-      var selectedDieIndices = this.props.selected.map(function (die) {
+      var selectedDieIndices = (0, _filters.filterRoll)(this.props.roll, this.props.selected).map(function (die) {
         return die.index;
       });
-
       var dice = this.props.value.map(function (value, ix) {
         var isSelected = (0, _lodash.indexOf)(selectedDieIndices, ix) > -1;
         return _react2.default.createElement(_Die2.default, { key: ix, value: value, selected: isSelected,
@@ -32804,7 +32845,8 @@ var TurnScoreboard = function (_React$Component) {
         return null;
       }
 
-      return this.props.value.items.map(function (item, ix) {
+      // show a list of the items as we are scoring them
+      var scoreItems = this.props.value.items.map(function (item, ix) {
         var key = "item" + ix;
         var dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
         var diceList = item.dice.map(function (die) {
@@ -32812,12 +32854,34 @@ var TurnScoreboard = function (_React$Component) {
         });
         return _react2.default.createElement(
           'li',
-          { key: key },
+          { className: 'valid', key: key },
           diceList,
           ': ',
           item.score
         );
       });
+
+      // list of die the user selected but we cannot score...
+      var errorItems = this.props.value.errors.map(function (item, ix) {
+        var key = "item" + ix;
+        var dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+        var diceList = item.dice.map(function (die) {
+          return dice[die];
+        });
+        return _react2.default.createElement(
+          'li',
+          { className: 'error', key: key },
+          'Unused: ',
+          diceList
+        );
+      });
+
+      return _react2.default.createElement(
+        'ul',
+        { className: 'turnScore' },
+        scoreItems,
+        errorItems
+      );
     }
   }]);
 
@@ -32841,6 +32905,152 @@ function filterRoll(roll, array) {
   return array.filter(function (item) {
     return item.roll === roll;
   });
+}
+
+/***/ }),
+/* 200 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _react = __webpack_require__(10);
+
+var _react2 = _interopRequireDefault(_react);
+
+var _Roll = __webpack_require__(189);
+
+var _Roll2 = _interopRequireDefault(_Roll);
+
+var _NextPlayer = __webpack_require__(196);
+
+var _NextPlayer2 = _interopRequireDefault(_NextPlayer);
+
+var _filters = __webpack_require__(199);
+
+var _game = __webpack_require__(201);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * Render the actions available for the player.
+ *
+ *
+ */
+var Actions = function (_React$Component) {
+  _inherits(Actions, _React$Component);
+
+  function Actions() {
+    _classCallCheck(this, Actions);
+
+    return _possibleConstructorReturn(this, (Actions.__proto__ || Object.getPrototypeOf(Actions)).apply(this, arguments));
+  }
+
+  _createClass(Actions, [{
+    key: 'render',
+    value: function render() {
+      // when farkled, can only go to "next"...
+      if (this.props.gameState.farkled) {
+        return _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext });
+      }
+
+      // if the user has rolled the dice...
+      if ((0, _game.haveRolled)(this.props.gameState)) {
+        var allSelected = (0, _game.allDiceSelected)(this.props.gameState);
+        var haveSelected = (0, _game.haveDiceSelected)(this.props.gameState);
+        var noErrors = (0, _game.noScoringErrors)(this.props.gameState);
+
+        // if all dice are selected, we cannot roll anymore so we can only
+        // advance to the next player.
+        if (allSelected && noErrors) {
+          return _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext });
+        } else if (haveSelected && !allSelected && noErrors) {
+          return _react2.default.createElement(
+            'div',
+            null,
+            _react2.default.createElement(_Roll2.default, { title: 'Roll again', onClick: this.props.onRoll }),
+            _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext })
+          );
+        }
+        // if they have rolled, but not selected anything so there's nothing we
+        // can do yet...
+        else if (!haveSelected) {
+            return null;
+          }
+          // if they have rolled but they have selected things that cannot be scored
+          // then we also can't do anything...
+          else if (haveSelected && !noErrors) {
+              return null;
+            }
+      }
+
+      return _react2.default.createElement(_Roll2.default, { onClick: this.props.onRoll });
+    }
+  }]);
+
+  return Actions;
+}(_react2.default.Component);
+
+exports.default = Actions;
+
+/***/ }),
+/* 201 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.haveDiceSelected = haveDiceSelected;
+exports.allDiceSelected = allDiceSelected;
+exports.haveRolled = haveRolled;
+exports.noScoringErrors = noScoringErrors;
+
+var _filters = __webpack_require__(199);
+
+/**
+ * Player has a selected at least one die.
+ */
+function haveDiceSelected(state) {
+  return (0, _filters.filterRoll)(state.roll, state.selectedDie).length > 0;
+}
+
+/**
+ * All dice have been selected.
+ */
+function allDiceSelected(state) {
+  var selectedRollDice = (0, _filters.filterRoll)(state.roll, state.selectedDie);
+  return selectedRollDice.length === state.dice.length;
+}
+
+/**
+ * The player has rolled their dice.
+ */
+function haveRolled(state) {
+  return state.dice.length !== 0;
+}
+
+/**
+ * There are no scoring errors.
+ *
+ * Note that this will return true when there are no selected dice.
+ */
+function noScoringErrors(state) {
+  return state.turnScore === 0 || state.turnScore != 0 && state.turnScore.errors.length === 0;
 }
 
 /***/ })

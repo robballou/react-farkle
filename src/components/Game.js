@@ -1,6 +1,7 @@
 import React from 'react';
 import {getRandomIntInclusive} from '../utils/random';
-import Roll from './Roll';
+
+import Actions from './Actions';
 import PlayerRoll from './PlayerRoll';
 import Scoreboard from './Scoreboard';
 import Messages from './Messages';
@@ -54,8 +55,16 @@ export default class Game extends React.Component {
     this.state = {
       currentPlayer: 1,
       currentMessage: 'Select "roll" to start your turn',
+
+      // collection of dice values (e.g. the dot-values only)
       dice: [],
+
+      // collection of the dice available with some metdata about state
+      availableDice: [],
+
+      // roll count, used to help differentiate between die indices
       roll: 1,
+
       selectedDie: [],
       diceRemaining: 6,
       messages: [],
@@ -105,12 +114,17 @@ export default class Game extends React.Component {
             player={this.state.currentPlayer}
             message={this.state.currentMessage} />
           <Messages value={this.state.messages} />
-          <div className="actions">
-            {this.renderActions()}
-          </div>
-          <div className="roll">
-            <PlayerRoll selected={this.state.selectedDie} value={this.state.dice} onClick={this.selectDie.bind(this)}/>
-          </div>
+          <Actions
+            onRoll={this.roll.bind(this)}
+            onNext={this.nextPlayer.bind(this)}
+            gameState={this.state}
+            />
+          <PlayerRoll
+            roll={this.state.roll}
+            selected={this.state.selectedDie}
+            value={this.state.dice}
+            farkled={this.state.farkled}
+            onClick={this.selectDie.bind(this)} />
           <TurnScoreboard selected={this.state.selectedDie} value={this.state.turnScore} />
           <Scoreboard />
         </div>
@@ -145,18 +159,31 @@ export default class Game extends React.Component {
    * Roll a new set of die for this player.
    */
   roll() {
+    // user has dice in play right now?
+    if (this.state.dice.length !== 0) {
+      this.state.diceRemaining = this.state.dice.length - (filterRoll(this.state.roll, this.state.selectedDie)).length;
+      this.setState({roll: ++this.state.roll, diceRemaining: this.state.diceRemaining});
+    }
+
     const newDice = [];
     for (var i = 0; i < this.state.diceRemaining; i++) {
       newDice.push(getRandomIntInclusive(1,6));
     }
 
-    const currentMessage = didFarkle(newDice) ? 'Farkled!' : 'Select die to score';
-    this.setState({dice: newDice, currentMessage, roll: ++this.state.roll });
-    // this.updateActions();
+    const farkled = didFarkle(newDice);
+    const currentMessage = farkled ? 'Farkled!' : 'Select die to score';
+    this.setState({
+      dice: newDice,
+      currentMessage,
+      farkled
+    });
   }
 
+  /**
+   * Player selected a die, so score it...
+   */
   selectDie(selected) {
-    // check if this dice is al
+    // check if this dice is already selected
     if (this.alreadySelected(selected)) {
       this.state.selectedDie = this.removeSelected(selected);
     }

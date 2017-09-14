@@ -25,13 +25,29 @@ export default class TurnScoreboard extends React.Component {
       return null;
     }
 
-    return this.props.value.items.map((item, ix) => {
+    // show a list of the items as we are scoring them
+    const scoreItems = this.props.value.items.map((item, ix) => {
       const key = "item" + ix;
       const dice = [
         '','⚀','⚁','⚂','⚃','⚄','⚅'
       ];
       const diceList = item.dice.map((die) => dice[die]);
-      return <li key={key}>{diceList}: {item.score}</li>;
+      return <li className="valid" key={key}>{diceList}: {item.score}</li>;
     });
+
+    // list of die the user selected but we cannot score...
+    const errorItems = this.props.value.errors.map((item, ix) => {
+      const key = "item" + ix;
+      const dice = [
+        '','⚀','⚁','⚂','⚃','⚄','⚅'
+      ];
+      const diceList = item.dice.map((die) => dice[die]);
+      return <li className="error" key={key}>Unused: {diceList}</li>;
+    });
+
+    return <ul className="turnScore">
+        {scoreItems}
+        {errorItems}
+      </ul>;
   }
 }

@@ -435,3 +435,27 @@ test('score() for a straight', t => {
     t.deepEqual(s.items, testCase.items, `Test #${ix} has incorrect items`);
   });
 });
+
+test('score() with multiple rolls', t => {
+  [
+    {
+      selected: [
+        {value: 1, roll: 1},
+        {value: 1, roll: 2},
+      ],
+      score: 200,
+    },
+    {
+      selected: [
+        {value: 1, roll: 1},
+        {value: 1, roll: 2},
+        {value: 1, roll: 2},
+        {value: 1, roll: 2},
+      ],
+      score: 1100,
+    },
+  ].forEach((testCase, ix) => {
+    const s = score(testCase.selected);
+    t.is(s.score, testCase.score);
+  });
+});

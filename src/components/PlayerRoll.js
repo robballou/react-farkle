@@ -1,15 +1,15 @@
 import React from 'react';
-import Die from './Die';
 import {indexOf} from 'lodash';
+import Die from './Die';
 
+import {filterRoll} from '../utils/filters';
+
+/**
+ * Represents a component containing a player's dice.
+ */
 export default class PlayerRoll extends React.Component {
   render() {
-    // if (this.state.die.length === 0) {
-    //   return null;
-    // }
-
-    const selectedDieIndices = this.props.selected.map((die) => die.index);
-
+    const selectedDieIndices = filterRoll(this.props.roll, this.props.selected).map((die) => die.index);
     const dice = this.props.value.map((value, ix) => {
       const isSelected = indexOf(selectedDieIndices, ix) > -1;
       return <Die key={ix} value={value} selected={isSelected}
