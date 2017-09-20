@@ -1,5 +1,5 @@
 import React from 'react';
-import {getRandomIntInclusive} from '../utils/random';
+import {merge} from 'lodash';
 
 import Actions from './Actions';
 import PlayerRoll from './PlayerRoll';
@@ -9,12 +9,16 @@ import NextPlayer from './NextPlayer';
 import TurnIndicator from './TurnIndicator';
 import TurnScoreboard from './TurnScoreboard';
 
+import {getRandomIntInclusive} from '../utils/random';
 import {filterRoll} from '../utils/filters';
+import {verifyRules} from '../utils/game';
 
 import {
-  didFarkle,
   score,
 } from '../utils/score';
+
+import Farkled from '../rules/Farkled';
+import InitialTurn500 from '../rules/InitialTurn500';
 
 // - user rolls all the dice
 // - selects which die they want to use for their score
@@ -65,15 +69,26 @@ export default class Game extends React.Component {
       // roll count, used to help differentiate between die indices
       roll: 1,
 
+      ruleResults: {},
+
       selectedDie: [],
       diceRemaining: 6,
       messages: [],
       turnScore: 0,
       scoreboard: {
-        1: 0,
-        2: 0,
+        1: [],
+        2: [],
       },
     };
+
+    this.rules = {
+      roll: [
+        Farkled
+      ],
+      select: [
+        InitialTurn500,
+      ]
+    }
   }
 
   /**
@@ -86,9 +101,17 @@ export default class Game extends React.Component {
   }
 
   nextPlayer() {
-    const next = (currentPlayer == 1) ? 2 : 1;
+    const next = (this.state.currentPlayer == 1) ? 2 : 1;
+
+    // add the player's score to the overall scoreboard...
+    const scoreboard = this.state.scoreboard;
+    scoreboard[this.state.currentPlayer].push(this.state.turnScore);
+
+    // update the state...
     this.setState({
       turnScore: 0,
+      roll: 1,
+      scoreboard,
       currentPlayer: next,
       messages: [`Player ${this.state.currentPlayer}, select roll to start your turn`]
     });
@@ -125,34 +148,11 @@ export default class Game extends React.Component {
             value={this.state.dice}
             farkled={this.state.farkled}
             onClick={this.selectDie.bind(this)} />
-          <TurnScoreboard selected={this.state.selectedDie} value={this.state.turnScore} />
-          <Scoreboard />
+          <TurnScoreboard farkled={this.state.farkled} selected={this.state.selectedDie} value={this.state.turnScore} />
+          <Scoreboard score={this.state.scoreboard} />
         </div>
       </div>
     );
-  }
-
-  /**
-   * Render action buttons (roll, next, etc)
-   *
-   * Actions:
-   *
-   * - Roll (initial and subsequent rolls)
-   * - Next player
-   * - Accept score (player selected all die they want, does not want to roll
-   *   remaining dice)
-   */
-  renderActions() {
-    if (this.state.dice.length > 0) {
-      if (didFarkle(this.state.dice)) {
-        return <NextPlayer onClick={() => this.nextPlayer()} />;
-      }
-      return null;
-    }
-
-    return (
-      <Roll onClick={() => this.roll()} />
-    )
   }
 
   /**
@@ -165,17 +165,30 @@ export default class Game extends React.Component {
       this.setState({roll: ++this.state.roll, diceRemaining: this.state.diceRemaining});
     }
 
+    if (this.state.diceRemaining == 0) {
+      this.state.diceRemaining = 6;
+    }
+
     const newDice = [];
     for (var i = 0; i < this.state.diceRemaining; i++) {
       newDice.push(getRandomIntInclusive(1,6));
     }
 
-    const farkled = didFarkle(newDice);
+    // check if they passed all of the "roll" rules before advancing. Currently we are
+    // only checking if they farkled here, but this could be extended to other cases.
+    const [passedRules, ruleResults] = verifyRules(this.rules.roll, this.state, newDice);
+
+    // check the farkled roll...
+    const farkled = (ruleResults.filter((rule) => rule.rule == 'Farkled'))[0].passed === false;
+    console.log({results: (ruleResults.filter((rule) => rule.rule == 'Farkled')), farkled});
+
+    // const farkled = didFarkle(newDice);
     const currentMessage = farkled ? 'Farkled!' : 'Select die to score';
     this.setState({
       dice: newDice,
       currentMessage,
-      farkled
+      farkled,
+      ruleResults: this.updateRuleResults('roll', passedRules, ruleResults),
     });
   }
 
@@ -191,6 +204,25 @@ export default class Game extends React.Component {
       selected.roll = this.state.roll;
       this.state.selectedDie.push(selected);
     }
-    this.setState({selectedDie: this.state.selectedDie, turnScore: score(this.state.selectedDie)});
+
+    const turnScore = score(this.state.selectedDie);
+    const [passedRules, ruleResults] = verifyRules(this.rules.select, this.state);
+    this.state.ruleResults = this.updateRuleResults('selectDie', passedRules, ruleResults);
+
+    this.setState({selectedDie: this.state.selectedDie, turnScore, ruleResults: this.state.ruleResults});
+  }
+
+  /**
+   * Update the rule results structure with a new set of results.
+   *
+   * Only one keyed entry is maintained per result set currently. E.g. if the
+   * player has rolled twice, the 'roll' result set will be for the most recent
+   * roll.
+   */
+  updateRuleResults(key, passed, results) {
+    return merge(this.state.ruleResults, {key: {
+      passed: passed,
+      results: results,
+    }});
   }
 }

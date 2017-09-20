@@ -4,9 +4,9 @@ Various notes on developing this
 
 ## Todo
 
-* Farkled player roll should not be selectable
-* Must score 500 initially
-* Scoring should be roll-specific or account for rolls. E.g., score a 5 on first roll then three 5's on second roll would be 550, not 1000.
+* Roll again if they use up all the dice...
+* Must score 500 initially... might be interesting to figure out a way to make "rules" for the game that are somewhat pluggable. This could be rule that basically states for turn 1, a player must get 500. The rule then will block a player from gaining any score until they meet all rules. "Farkling" could also be rule... Rules could also be "applicable" (e.g. initial turn only applies when the turn is 1, etc.)
+* Select number of players screen at the beginning of the game
 
 ## State
 

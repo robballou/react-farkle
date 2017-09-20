@@ -17,6 +17,10 @@ export default class TurnScoreboard extends React.Component {
       return 0;
     }
 
+    if (this.props.farkled) {
+      return <span><strike>{this.props.value.score}</strike> 0</span>;
+    }
+
     return this.props.value.score;
   }
 

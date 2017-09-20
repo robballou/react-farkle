@@ -1,0 +1,5 @@
+import test from 'ava';
+import InitialTurn500 from '../rules/InitialTurn500';
+
+test('InitialTurn500 requires 500 points on first turn...', t => {
+});

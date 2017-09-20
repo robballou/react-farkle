@@ -32,7 +32,10 @@ export default class Actions extends React.Component {
       // if all dice are selected, we cannot roll anymore so we can only
       // advance to the next player.
       if (allSelected && noErrors) {
-        return <NextPlayer onClick={this.props.onNext} />;
+        return <div>
+            <Roll title="Roll again" onClick={this.props.onRoll} />
+            <NextPlayer onClick={this.props.onNext} />
+          </div>;
       }
       else if (haveSelected && !allSelected && noErrors) {
         return (

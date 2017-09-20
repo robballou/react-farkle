@@ -22,6 +22,10 @@ export function haveRolled(state) {
   return state.dice.length !== 0;
 }
 
+export function haveUsedAllDice(state) {
+  // return 
+}
+
 /**
  * There are no scoring errors.
  *
@@ -29,4 +33,21 @@ export function haveRolled(state) {
  */
 export function noScoringErrors(state) {
   return state.turnScore === 0 || (state.turnScore != 0 && state.turnScore.errors.length === 0);
+}
+
+export function verifyRules(rules, ...args) {
+  let passed = true;
+  const results = [];
+
+  for (var i = 0, len = rules.length; i < len; i++) {
+    const thisRule = new rules[i];
+    const thisResult = thisRule.verify(...args);
+    results.push(thisResult);
+    if (!thisResult.passed) {
+      passed = false;
+      break;
+    }
+  }
+
+  return [passed, results];
 }
