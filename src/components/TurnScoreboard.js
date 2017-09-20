@@ -2,6 +2,13 @@ import React from 'react';
 import {score} from '../utils/score';
 
 export default class TurnScoreboard extends React.Component {
+  constructor() {
+    super();
+
+    this.dice = [
+      '','⚀','⚁','⚂','⚃','⚄','⚅'
+    ];
+  }
   render() {
     const scoreDetails = this.scoreItems();
     return <div className="scoreboard--turn">
@@ -32,20 +39,14 @@ export default class TurnScoreboard extends React.Component {
     // show a list of the items as we are scoring them
     const scoreItems = this.props.value.items.map((item, ix) => {
       const key = "item" + ix;
-      const dice = [
-        '','⚀','⚁','⚂','⚃','⚄','⚅'
-      ];
-      const diceList = item.dice.map((die) => dice[die]);
+      const diceList = item.dice.map((die) => this.dice[die]);
       return <li className="valid" key={key}>{diceList}: {item.score}</li>;
     });
 
     // list of die the user selected but we cannot score...
     const errorItems = this.props.value.errors.map((item, ix) => {
       const key = "item" + ix;
-      const dice = [
-        '','⚀','⚁','⚂','⚃','⚄','⚅'
-      ];
-      const diceList = item.dice.map((die) => dice[die]);
+      const diceList = item.dice.map((die) => this.dice[die]);
       return <li className="error" key={key}>Unused: {diceList}</li>;
     });
 

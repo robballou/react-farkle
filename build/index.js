@@ -33107,7 +33107,10 @@ var TurnScoreboard = function (_React$Component) {
   function TurnScoreboard() {
     _classCallCheck(this, TurnScoreboard);
 
-    return _possibleConstructorReturn(this, (TurnScoreboard.__proto__ || Object.getPrototypeOf(TurnScoreboard)).apply(this, arguments));
+    var _this = _possibleConstructorReturn(this, (TurnScoreboard.__proto__ || Object.getPrototypeOf(TurnScoreboard)).call(this));
+
+    _this.dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    return _this;
   }
 
   _createClass(TurnScoreboard, [{
@@ -33155,6 +33158,8 @@ var TurnScoreboard = function (_React$Component) {
   }, {
     key: 'scoreItems',
     value: function scoreItems() {
+      var _this2 = this;
+
       if (this.props.value == 0) {
         return null;
       }
@@ -33162,9 +33167,8 @@ var TurnScoreboard = function (_React$Component) {
       // show a list of the items as we are scoring them
       var scoreItems = this.props.value.items.map(function (item, ix) {
         var key = "item" + ix;
-        var dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
         var diceList = item.dice.map(function (die) {
-          return dice[die];
+          return _this2.dice[die];
         });
         return _react2.default.createElement(
           'li',
@@ -33178,9 +33182,8 @@ var TurnScoreboard = function (_React$Component) {
       // list of die the user selected but we cannot score...
       var errorItems = this.props.value.errors.map(function (item, ix) {
         var key = "item" + ix;
-        var dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
         var diceList = item.dice.map(function (die) {
-          return dice[die];
+          return _this2.dice[die];
         });
         return _react2.default.createElement(
           'li',
