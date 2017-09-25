@@ -8,6 +8,7 @@ Currently has:
 
 * Some [React](https://facebook.github.io/react/) structure
 * Some [Ava](https://github.com/avajs/ava) testing for scoring mechanisms
+* Some styling, but not much :smirk:
 
 ## Install
 
