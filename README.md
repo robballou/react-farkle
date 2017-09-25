@@ -17,3 +17,7 @@ Currently has:
 3. `npm run webpack` it.
 4. Serve it (requires [docker-compose](https://docs.docker.com/compose/)): `npm run up` (find the game at `localhost:8080`)
 5. Stop serving it: `npm run down`
+
+## Gif it
+
+![example gameplay](./farkle.gif)
