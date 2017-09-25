@@ -13,6 +13,11 @@ button {
   font-weight: bold;
   font-size: 2em; }
 
+div.actions {
+  padding-bottom: 1em; }
+  div.actions button {
+    margin-right: 1em; }
+
 button.die {
   margin: 0 1em 0 0; }
 

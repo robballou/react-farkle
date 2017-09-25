@@ -32328,11 +32328,15 @@ var Game = function (_React$Component) {
             player: this.state.currentPlayer,
             message: this.state.currentMessage }),
           _react2.default.createElement(_Messages2.default, { value: this.state.messages }),
-          _react2.default.createElement(_Actions2.default, {
-            onRoll: this.roll.bind(this),
-            onNext: this.nextPlayer.bind(this),
-            gameState: this.state
-          }),
+          _react2.default.createElement(
+            'div',
+            { className: 'actions' },
+            _react2.default.createElement(_Actions2.default, {
+              onRoll: this.roll.bind(this),
+              onNext: this.nextPlayer.bind(this),
+              gameState: this.state
+            })
+          ),
           _react2.default.createElement(_PlayerRoll2.default, {
             roll: this.state.roll,
             selected: this.state.selectedDie,

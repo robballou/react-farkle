@@ -165,11 +165,13 @@ export default class Game extends React.Component {
             player={this.state.currentPlayer}
             message={this.state.currentMessage} />
           <Messages value={this.state.messages} />
-          <Actions
-            onRoll={this.roll.bind(this)}
-            onNext={this.nextPlayer.bind(this)}
-            gameState={this.state}
-            />
+          <div className="actions">
+            <Actions
+              onRoll={this.roll.bind(this)}
+              onNext={this.nextPlayer.bind(this)}
+              gameState={this.state}
+              />
+          </div>
           <PlayerRoll
             roll={this.state.roll}
             selected={this.state.selectedDie}

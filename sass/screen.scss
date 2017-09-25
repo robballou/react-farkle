@@ -16,6 +16,7 @@ button {
   font-size: 2em;
 }
 
+@import 'components/actions';
 @import 'components/die';
 @import 'components/header';
 @import 'components/turn_indicator';

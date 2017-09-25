@@ -33,17 +33,15 @@ export default class Actions extends React.Component {
       // advance to the next player.
       if (allSelected && noErrors) {
         return <div>
-            <Roll title="Roll again" onClick={this.props.onRoll} />
-            <NextPlayer onClick={this.props.onNext} />
-          </div>;
+          <Roll title="Roll again" onClick={this.props.onRoll} />
+          <NextPlayer onClick={this.props.onNext} />
+        </div>;
       }
       else if (haveSelected && !allSelected && noErrors) {
-        return (
-          <div>
-            <Roll title="Roll again" onClick={this.props.onRoll} />
-            <NextPlayer onClick={this.props.onNext} />
-          </div>
-        );
+        return <div>
+          <Roll title="Roll again" onClick={this.props.onRoll} />
+          <NextPlayer onClick={this.props.onNext} />
+        </div>;
       }
       // if they have rolled, but not selected anything so there's nothing we
       // can do yet...
