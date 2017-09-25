@@ -1,0 +1,21 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  padding: 1em 0 1em 1em;
+}
+
+button {
+  background: #eee;
+  border: 1px solid #333;
+  padding: 0.25em 0.5em;
+  font-weight: bold;
+  font-size: 2em;
+}
+
+@import 'components/die';
+@import 'components/header';
+@import 'components/turn_indicator';

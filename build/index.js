@@ -19364,11 +19364,15 @@ function normalizeDice(dice) {
   });
 }
 
+function turnScoreObject() {
+  return { score: 0, items: [], errors: [], farkled: false };
+}
+
 function score(allDiceRolls) {
   var rolls = (0, _lodash.groupBy)(allDiceRolls, function (die) {
     return (0, _lodash.isNumber)(die) ? 0 : die.roll;
   });
-  var thisScore = { score: 0, items: [], errors: [] };
+  var thisScore = turnScoreObject();
   (0, _lodash.forIn)(rolls, function (dice, key) {
     var rollScore = scoreRoll(dice);
     thisScore.score += rollScore.score;
@@ -19382,7 +19386,7 @@ function score(allDiceRolls) {
  * Score a single dice roll.
  */
 function scoreRoll(dice) {
-  var thisScore = { score: 0, items: [], errors: [] };
+  var thisScore = turnScoreObject();
   var thisDice = normalizeDice(dice);
 
   // map the selected die into the respective scores, starting from the high
@@ -32196,33 +32200,15 @@ var Game = function (_React$Component) {
 
     var _this = _possibleConstructorReturn(this, (Game.__proto__ || Object.getPrototypeOf(Game)).call(this));
 
-    _this.state = {
-      currentPlayer: 1,
-      currentMessage: 'Select "roll" to start your turn',
+    _this.state = _this.getState();
 
-      // collection of dice values (e.g. the dot-values only)
-      dice: [],
-
-      // collection of the dice available with some metdata about state
-      availableDice: [],
-
-      // roll count, used to help differentiate between die indices
-      roll: 1,
-
-      ruleResults: {},
-
-      selectedDie: [],
-      diceRemaining: 6,
-      messages: [],
-      turnScore: 0,
-      scoreboard: {
-        1: [],
-        2: []
-      }
-    };
-
+    // these are the rules used for this game ... broken out by specific events
+    // that they need to be used for.
     _this.rules = {
+      // post-roll functionality
       roll: [_Farkled2.default],
+
+      // selected a die...
       select: [_InitialTurn2.default]
     };
     return _this;
@@ -32243,22 +32229,70 @@ var Game = function (_React$Component) {
       return alreadySelected.length > 0;
     }
   }, {
+    key: 'getState',
+    value: function getState() {
+      return {
+        // current player number (1-index)
+        currentPlayer: 1,
+
+        // the current message to display
+        currentMessage: 'Select "roll" to start your turn',
+
+        // collection of dice values (e.g. the dot-values only)
+        dice: [],
+
+        // collection of the dice available with some metdata about state
+        availableDice: [],
+
+        // roll count, used to help differentiate between die indices
+        roll: 1,
+
+        // capture the results of rules here so that they can be shared with
+        // components as needed.
+        ruleResults: {},
+
+        // dice that the player has selected
+        selectedDie: [],
+
+        // number of dice remaining on the table
+        diceRemaining: 6,
+
+        messages: [],
+
+        // current turn score...
+        turnScore: 0,
+
+        farkled: false,
+
+        // the scoreboard for this game (currently hardcoded for two players)
+        scoreboard: {
+          1: [],
+          2: []
+        }
+      };
+    }
+
+    /**
+     * Accept the score and move to the next player.
+     */
+
+  }, {
     key: 'nextPlayer',
     value: function nextPlayer() {
       var next = this.state.currentPlayer == 1 ? 2 : 1;
 
       // add the player's score to the overall scoreboard...
-      var scoreboard = this.state.scoreboard;
-      scoreboard[this.state.currentPlayer].push(this.state.turnScore);
+      if (this.state.turnScore !== 0 && this.state.turnScore.farkled === false) {
+        var scoreboard = this.state.scoreboard;
+        scoreboard[this.state.currentPlayer].push(this.state.turnScore);
+      } else {
+        console.log({ nextPlayer: this.state.turnScore });
+      }
+      this.state.currentPlayer = next;
 
       // update the state...
-      this.setState({
-        turnScore: 0,
-        roll: 1,
-        scoreboard: scoreboard,
-        currentPlayer: next,
-        messages: ['Player ' + this.state.currentPlayer + ', select roll to start your turn']
-      });
+      var newState = (0, _lodash.merge)(this.getState(), (0, _lodash.pick)(this.state, ['scoreboard', 'currentPlayer']));
+      this.setState(newState);
     }
 
     /**
@@ -32347,9 +32381,10 @@ var Game = function (_React$Component) {
       var farkled = ruleResults.filter(function (rule) {
         return rule.rule == 'Farkled';
       })[0].passed === false;
-      console.log({ results: ruleResults.filter(function (rule) {
-          return rule.rule == 'Farkled';
-        }), farkled: farkled });
+      var turnScore = this.state.turnScore;
+      if (farkled) {
+        turnScore.farkled = true;
+      }
 
       // const farkled = didFarkle(newDice);
       var currentMessage = farkled ? 'Farkled!' : 'Select die to score';
@@ -32357,6 +32392,7 @@ var Game = function (_React$Component) {
         dice: newDice,
         currentMessage: currentMessage,
         farkled: farkled,
+        turnScore: turnScore,
         ruleResults: this.updateRuleResults('roll', passedRules, ruleResults)
       });
     }
@@ -32368,6 +32404,10 @@ var Game = function (_React$Component) {
   }, {
     key: 'selectDie',
     value: function selectDie(selected) {
+      if (this.state.farkled) {
+        return;
+      }
+
       // check if this dice is already selected
       if (this.alreadySelected(selected)) {
         this.state.selectedDie = this.removeSelected(selected);

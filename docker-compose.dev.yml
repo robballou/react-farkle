@@ -1,0 +1,9 @@
+version: '2'
+services:
+  game:
+    image: nginx
+    ports:
+      - 8080:80
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./build:/usr/share/nginx/html/build

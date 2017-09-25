@@ -15,6 +15,5 @@ Currently has:
 1. `nvm use` (if you're using [nvm](https://github.com/creationix/nvm)).
 2. `npm install` it.
 3. `npm run webpack` it.
-
-Currently just opening the `index.html` file directly in a browser, but would be
-simple to include a Docker compose setup for that.
+4. Serve it (requires [docker-compose](https://docs.docker.com/compose/)): `npm run up` (find the game at `localhost:8080`)
+5. Stop serving it: `npm run down`

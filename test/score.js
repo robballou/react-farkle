@@ -1,4 +1,5 @@
 import test from 'ava';
+import {has} from 'lodash';
 
 import {
   dieCount,
@@ -457,5 +458,18 @@ test('score() with multiple rolls', t => {
   ].forEach((testCase, ix) => {
     const s = score(testCase.selected);
     t.is(s.score, testCase.score);
+  });
+});
+
+test('score() result has a .farkled property', t => {
+  [
+    {
+      selected: [
+        {value: 1, roll: 1},
+      ]
+    }
+  ].forEach((testCase, ix) => {
+    const s = score(testCase.selected);
+    t.is(has(s, 'farkled'), true);
   });
 });

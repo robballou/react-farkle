@@ -38,9 +38,13 @@ export function normalizeDice(dice) {
   });
 }
 
+function turnScoreObject() {
+  return {score: 0, items: [], errors: [], farkled: false};
+}
+
 export function score(allDiceRolls) {
   const rolls = groupBy(allDiceRolls, (die) => (isNumber(die)) ? 0 : die.roll);
-  const thisScore = {score: 0, items: [], errors: []};
+  const thisScore = turnScoreObject();
   forIn(rolls, (dice, key) => {
     const rollScore = scoreRoll(dice);
     thisScore.score += rollScore.score;
@@ -54,7 +58,7 @@ export function score(allDiceRolls) {
  * Score a single dice roll.
  */
 export function scoreRoll(dice) {
-  const thisScore = {score: 0, items: [], errors: []};
+  const thisScore = turnScoreObject();
   const thisDice = normalizeDice(dice);
 
   // map the selected die into the respective scores, starting from the high

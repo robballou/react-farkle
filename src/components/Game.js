@@ -1,5 +1,5 @@
 import React from 'react';
-import {merge} from 'lodash';
+import {merge, pick} from 'lodash';
 
 import Actions from './Actions';
 import PlayerRoll from './PlayerRoll';
@@ -56,35 +56,17 @@ export default class Game extends React.Component {
   constructor() {
     super();
 
-    this.state = {
-      currentPlayer: 1,
-      currentMessage: 'Select "roll" to start your turn',
+    this.state = this.getState();
 
-      // collection of dice values (e.g. the dot-values only)
-      dice: [],
-
-      // collection of the dice available with some metdata about state
-      availableDice: [],
-
-      // roll count, used to help differentiate between die indices
-      roll: 1,
-
-      ruleResults: {},
-
-      selectedDie: [],
-      diceRemaining: 6,
-      messages: [],
-      turnScore: 0,
-      scoreboard: {
-        1: [],
-        2: [],
-      },
-    };
-
+    // these are the rules used for this game ... broken out by specific events
+    // that they need to be used for.
     this.rules = {
+      // post-roll functionality
       roll: [
         Farkled
       ],
+
+      // selected a die...
       select: [
         InitialTurn500,
       ]
@@ -100,21 +82,67 @@ export default class Game extends React.Component {
     return alreadySelected.length > 0;
   }
 
+  getState() {
+    return {
+      // current player number (1-index)
+      currentPlayer: 1,
+
+      // the current message to display
+      currentMessage: 'Select "roll" to start your turn',
+
+      // collection of dice values (e.g. the dot-values only)
+      dice: [],
+
+      // collection of the dice available with some metdata about state
+      availableDice: [],
+
+      // roll count, used to help differentiate between die indices
+      roll: 1,
+
+      // capture the results of rules here so that they can be shared with
+      // components as needed.
+      ruleResults: {},
+
+      // dice that the player has selected
+      selectedDie: [],
+
+      // number of dice remaining on the table
+      diceRemaining: 6,
+
+      messages: [],
+
+      // current turn score...
+      turnScore: 0,
+
+      farkled: false,
+
+      // the scoreboard for this game (currently hardcoded for two players)
+      scoreboard: {
+        1: [],
+        2: [],
+      },
+    };
+  }
+
+  /**
+   * Accept the score and move to the next player.
+   */
   nextPlayer() {
     const next = (this.state.currentPlayer == 1) ? 2 : 1;
 
     // add the player's score to the overall scoreboard...
-    const scoreboard = this.state.scoreboard;
-    scoreboard[this.state.currentPlayer].push(this.state.turnScore);
+    if (this.state.turnScore !== 0 && this.state.turnScore.farkled === false) {
+      const scoreboard = this.state.scoreboard;
+      scoreboard[this.state.currentPlayer].push(this.state.turnScore);
+    }
+    else {
+      console.log({nextPlayer: this.state.turnScore});
+    }
+    this.state.currentPlayer = next;
 
     // update the state...
-    this.setState({
-      turnScore: 0,
-      roll: 1,
-      scoreboard,
-      currentPlayer: next,
-      messages: [`Player ${this.state.currentPlayer}, select roll to start your turn`]
-    });
+    const newState = merge(this.getState(), pick(this.state, ['scoreboard', 'currentPlayer']));
+    this.setState(newState);
   }
 
   /**
@@ -180,7 +208,10 @@ export default class Game extends React.Component {
 
     // check the farkled roll...
     const farkled = (ruleResults.filter((rule) => rule.rule == 'Farkled'))[0].passed === false;
-    console.log({results: (ruleResults.filter((rule) => rule.rule == 'Farkled')), farkled});
+    const turnScore = this.state.turnScore;
+    if (farkled) {
+      turnScore.farkled = true;
+    }
 
     // const farkled = didFarkle(newDice);
     const currentMessage = farkled ? 'Farkled!' : 'Select die to score';
@@ -188,6 +219,7 @@ export default class Game extends React.Component {
       dice: newDice,
       currentMessage,
       farkled,
+      turnScore,
       ruleResults: this.updateRuleResults('roll', passedRules, ruleResults),
     });
   }
@@ -196,6 +228,10 @@ export default class Game extends React.Component {
    * Player selected a die, so score it...
    */
   selectDie(selected) {
+    if (this.state.farkled) {
+      return;
+    }
+
     // check if this dice is already selected
     if (this.alreadySelected(selected)) {
       this.state.selectedDie = this.removeSelected(selected);
