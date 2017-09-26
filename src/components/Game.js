@@ -10,7 +10,7 @@ import TurnIndicator from './TurnIndicator';
 import TurnScoreboard from './TurnScoreboard';
 
 import {getRandomIntInclusive} from '../utils/random';
-import {filterRoll} from '../utils/filters';
+import {filterRoll, passedRule} from '../utils/filters';
 import {verifyRules} from '../utils/game';
 
 import {
@@ -18,6 +18,7 @@ import {
 } from '../utils/score';
 
 import Farkled from '../rules/Farkled';
+import Win from '../rules/Win';
 import InitialTurn500 from '../rules/InitialTurn500';
 
 // - user rolls all the dice
@@ -69,8 +70,12 @@ export default class Game extends React.Component {
       // selected a die...
       select: [
         InitialTurn500,
+      ],
+
+      nextPlayer: [
+        Win
       ]
-    }
+    };
   }
 
   /**
@@ -82,6 +87,11 @@ export default class Game extends React.Component {
     return alreadySelected.length > 0;
   }
 
+  /**
+   * Get the default state object.
+   *
+   * Used in two places: the initial start of the app plus each turn.
+   */
   getState() {
     return {
       // current player number (1-index)
@@ -154,8 +164,6 @@ export default class Game extends React.Component {
 
   /**
    * Render the game.
-   *
-   * TODO Change Roll into a component and use state for showing die or not.
    */
   render() {
     return (
@@ -209,7 +217,7 @@ export default class Game extends React.Component {
     const [passedRules, ruleResults] = verifyRules(this.rules.roll, this.state, newDice);
 
     // check the farkled roll...
-    const farkled = (ruleResults.filter((rule) => rule.rule == 'Farkled'))[0].passed === false;
+    const farkled = passedRule('Farkled', ruleResults) === false;
     const turnScore = this.state.turnScore;
     if (farkled) {
       turnScore.farkled = true;
@@ -230,6 +238,7 @@ export default class Game extends React.Component {
    * Player selected a die, so score it...
    */
   selectDie(selected) {
+    // if the player has farkled, they cannot select anymore dice...
     if (this.state.farkled) {
       return;
     }
@@ -244,10 +253,16 @@ export default class Game extends React.Component {
     }
 
     const turnScore = score(this.state.selectedDie);
+    this.state.turnScore = turnScore;
     const [passedRules, ruleResults] = verifyRules(this.rules.select, this.state);
-    this.state.ruleResults = this.updateRuleResults('selectDie', passedRules, ruleResults);
+    this.state.ruleResults = this.updateRuleResults('select', passedRules, ruleResults);
 
-    this.setState({selectedDie: this.state.selectedDie, turnScore, ruleResults: this.state.ruleResults});
+    let currentMessage = this.state.currentMessage;
+    if (passedRule('InitialTurn500', ruleResults) === false) {
+      currentMessage = 'Select die to score. You must get 500 or more points on your first turn.';
+    }
+
+    this.setState({selectedDie: this.state.selectedDie, turnScore, currentMessage, ruleResults: this.state.ruleResults});
   }
 
   /**
@@ -258,9 +273,13 @@ export default class Game extends React.Component {
    * roll.
    */
   updateRuleResults(key, passed, results) {
-    return merge(this.state.ruleResults, {key: {
+    // to set the key specified in the argument, we need this workaround.
+    const newRuleResults = {};
+    newRuleResults[key] = {
       passed: passed,
       results: results,
-    }});
+    };
+
+    return merge(this.state.ruleResults, newRuleResults);
   }
 }

@@ -4698,10 +4698,31 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.filterRoll = filterRoll;
+exports.passedRule = passedRule;
 function filterRoll(roll, array) {
   return array.filter(function (item) {
     return item.roll === roll;
   });
+}
+
+/**
+ * Determine the value of a passed property of a rule result.
+ */
+function passedRule(rule, ruleResults) {
+  // if the first argument is false instead of an array, then
+  // there is no rule results yet...
+  if (ruleResults === false) {
+    return null;
+  }
+
+  // filter anre return the passed property.
+  var results = ruleResults.filter(function (thisRule) {
+    return thisRule.rule == rule;
+  });
+  if (results.length === 0) {
+    return null;
+  }
+  return results[0].passed;
 }
 
 /***/ }),
@@ -32148,6 +32169,10 @@ var _Farkled = __webpack_require__(202);
 
 var _Farkled2 = _interopRequireDefault(_Farkled);
 
+var _Win = __webpack_require__(206);
+
+var _Win2 = _interopRequireDefault(_Win);
+
 var _InitialTurn = __webpack_require__(205);
 
 var _InitialTurn2 = _interopRequireDefault(_InitialTurn);
@@ -32209,7 +32234,9 @@ var Game = function (_React$Component) {
       roll: [_Farkled2.default],
 
       // selected a die...
-      select: [_InitialTurn2.default]
+      select: [_InitialTurn2.default],
+
+      nextPlayer: [_Win2.default]
     };
     return _this;
   }
@@ -32228,6 +32255,13 @@ var Game = function (_React$Component) {
       });
       return alreadySelected.length > 0;
     }
+
+    /**
+     * Get the default state object.
+     *
+     * Used in two places: the initial start of the app plus each turn.
+     */
+
   }, {
     key: 'getState',
     value: function getState() {
@@ -32311,8 +32345,6 @@ var Game = function (_React$Component) {
 
     /**
      * Render the game.
-     *
-     * TODO Change Roll into a component and use state for showing die or not.
      */
 
   }, {
@@ -32382,9 +32414,7 @@ var Game = function (_React$Component) {
       // check the farkled roll...
 
 
-      var farkled = ruleResults.filter(function (rule) {
-        return rule.rule == 'Farkled';
-      })[0].passed === false;
+      var farkled = (0, _filters.passedRule)('Farkled', ruleResults) === false;
       var turnScore = this.state.turnScore;
       if (farkled) {
         turnScore.farkled = true;
@@ -32408,6 +32438,7 @@ var Game = function (_React$Component) {
   }, {
     key: 'selectDie',
     value: function selectDie(selected) {
+      // if the player has farkled, they cannot select anymore dice...
       if (this.state.farkled) {
         return;
       }
@@ -32421,15 +32452,21 @@ var Game = function (_React$Component) {
       }
 
       var turnScore = (0, _score.score)(this.state.selectedDie);
+      this.state.turnScore = turnScore;
 
       var _verifyRules3 = (0, _game.verifyRules)(this.rules.select, this.state),
           _verifyRules4 = _slicedToArray(_verifyRules3, 2),
           passedRules = _verifyRules4[0],
           ruleResults = _verifyRules4[1];
 
-      this.state.ruleResults = this.updateRuleResults('selectDie', passedRules, ruleResults);
+      this.state.ruleResults = this.updateRuleResults('select', passedRules, ruleResults);
 
-      this.setState({ selectedDie: this.state.selectedDie, turnScore: turnScore, ruleResults: this.state.ruleResults });
+      var currentMessage = this.state.currentMessage;
+      if ((0, _filters.passedRule)('InitialTurn500', ruleResults) === false) {
+        currentMessage = 'Select die to score. You must get 500 or more points on your first turn.';
+      }
+
+      this.setState({ selectedDie: this.state.selectedDie, turnScore: turnScore, currentMessage: currentMessage, ruleResults: this.state.ruleResults });
     }
 
     /**
@@ -32443,10 +32480,14 @@ var Game = function (_React$Component) {
   }, {
     key: 'updateRuleResults',
     value: function updateRuleResults(key, passed, results) {
-      return (0, _lodash.merge)(this.state.ruleResults, { key: {
-          passed: passed,
-          results: results
-        } });
+      // to set the key specified in the argument, we need this workaround.
+      var newRuleResults = {};
+      newRuleResults[key] = {
+        passed: passed,
+        results: results
+      };
+
+      return (0, _lodash.merge)(this.state.ruleResults, newRuleResults);
     }
   }]);
 
@@ -32497,6 +32538,8 @@ var _react = __webpack_require__(9);
 
 var _react2 = _interopRequireDefault(_react);
 
+var _lodash = __webpack_require__(84);
+
 var _Roll = __webpack_require__(192);
 
 var _Roll2 = _interopRequireDefault(_Roll);
@@ -32517,11 +32560,19 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+// these consts are really shareable... e.g. there won't be a ROLL && ROLL_AGAIN
+var ACTION_NONE = null;
+var ACTION_ROLL = 'ROLL';
+var ACTION_ROLL_AGAIN = 'ROLL_AGAIN';
+var ACTION_ROLL_AGAIN_NEXT = 'ROLL_AGAIN_NEXT';
+var ACTION_NEXT = 'ROLL_NEXT';
+
 /**
  * Render the actions available for the player.
  *
  *
  */
+
 var Actions = function (_React$Component) {
   _inherits(Actions, _React$Component);
 
@@ -32532,49 +32583,70 @@ var Actions = function (_React$Component) {
   }
 
   _createClass(Actions, [{
+    key: 'getActions',
+    value: function getActions(state) {
+      if (state.farkled) {
+        return ACTION_NEXT;
+      }
+
+      // if the player has not rolled yet...
+      if (!(0, _game.haveRolled)(state)) {
+        return ACTION_ROLL;
+      }
+
+      // this will be true if the player still needs to pass their initial turn
+      // score before proceeding with normal play...
+      var needsInitialScore = (0, _game.needsInitialTurnScore)(state);
+
+      // various flags related to the game state
+      var allSelected = (0, _game.allDiceSelected)(state);
+      var haveSelected = (0, _game.haveDiceSelected)(state);
+      var noErrors = (0, _game.noScoringErrors)(state);
+
+      if (!_game.needsInitialTurnScore && allSelected && noErrors) {
+        return ACTION_ROLL_AGAIN_NEXT;
+      }
+      // they have selected dice and they haven't selected them all
+      else if (!_game.needsInitialTurnScore && haveSelected && !allSelected && noErrors) {
+          return ACTION_ROLL_AGAIN_NEXT;
+        } else if (_game.needsInitialTurnScore && haveSelected) {
+          return ACTION_ROLL_AGAIN;
+        }
+
+      return ACTION_NONE;
+    }
+
+    /**
+     * Render this component.
+     *
+     * See getActions() for details on how each button/state is selected.
+     */
+
+  }, {
     key: 'render',
     value: function render() {
-      // when farkled, can only go to "next"...
-      if (this.props.gameState.farkled) {
-        return _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext });
-      }
+      var actions = this.getActions(this.props.gameState);
 
-      // if the user has rolled the dice...
-      if ((0, _game.haveRolled)(this.props.gameState)) {
-        var allSelected = (0, _game.allDiceSelected)(this.props.gameState);
-        var haveSelected = (0, _game.haveDiceSelected)(this.props.gameState);
-        var noErrors = (0, _game.noScoringErrors)(this.props.gameState);
+      switch (actions) {
+        case ACTION_NEXT:
+          return _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext });
 
-        // if all dice are selected, we cannot roll anymore so we can only
-        // advance to the next player.
-        if (allSelected && noErrors) {
+        case ACTION_ROLL:
+          return _react2.default.createElement(_Roll2.default, { onClick: this.props.onRoll });
+
+        case ACTION_ROLL_AGAIN:
+          return _react2.default.createElement(_Roll2.default, { title: 'Roll again', onClick: this.props.onRoll });
+
+        case ACTION_ROLL_AGAIN_NEXT:
           return _react2.default.createElement(
             'div',
             null,
             _react2.default.createElement(_Roll2.default, { title: 'Roll again', onClick: this.props.onRoll }),
             _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext })
           );
-        } else if (haveSelected && !allSelected && noErrors) {
-          return _react2.default.createElement(
-            'div',
-            null,
-            _react2.default.createElement(_Roll2.default, { title: 'Roll again', onClick: this.props.onRoll }),
-            _react2.default.createElement(_NextPlayer2.default, { onClick: this.props.onNext })
-          );
-        }
-        // if they have rolled, but not selected anything so there's nothing we
-        // can do yet...
-        else if (!haveSelected) {
-            return null;
-          }
-          // if they have rolled but they have selected things that cannot be scored
-          // then we also can't do anything...
-          else if (haveSelected && !noErrors) {
-              return null;
-            }
       }
 
-      return _react2.default.createElement(_Roll2.default, { onClick: this.props.onRoll });
+      return null;
     }
   }]);
 
@@ -32654,10 +32726,13 @@ exports.haveDiceSelected = haveDiceSelected;
 exports.allDiceSelected = allDiceSelected;
 exports.haveRolled = haveRolled;
 exports.haveUsedAllDice = haveUsedAllDice;
+exports.needsInitialTurnScore = needsInitialTurnScore;
 exports.noScoringErrors = noScoringErrors;
 exports.verifyRules = verifyRules;
 
 var _filters = __webpack_require__(33);
+
+var _lodash = __webpack_require__(84);
 
 /**
  * Player has a selected at least one die.
@@ -32681,9 +32756,13 @@ function haveRolled(state) {
   return state.dice.length !== 0;
 }
 
-function haveUsedAllDice(state) {}
-// return 
+function haveUsedAllDice(state) {
+  // return
+}
 
+function needsInitialTurnScore(state) {
+  return (0, _filters.passedRule)('InitialTurn500', (0, _lodash.get)(state.ruleResults, 'select.results', false)) === false;
+}
 
 /**
  * There are no scoring errors.
@@ -32694,6 +32773,7 @@ function noScoringErrors(state) {
   return state.turnScore === 0 || state.turnScore != 0 && state.turnScore.errors.length === 0;
 }
 
+var cachedRules = {};
 function verifyRules(rules) {
   var passed = true;
   var results = [];
@@ -32703,7 +32783,8 @@ function verifyRules(rules) {
   }
 
   for (var i = 0, len = rules.length; i < len; i++) {
-    var thisRule = new rules[i]();
+    var cached = (0, _lodash.get)(cachedRules, rules[i].constructor.name);
+    var thisRule = cached ? cached : new rules[i]();
     var thisResult = thisRule.verify.apply(thisRule, args);
     results.push(thisResult);
     if (!thisResult.passed) {
@@ -33413,7 +33494,20 @@ var InitialTurn500 = function (_Rule) {
   _createClass(InitialTurn500, [{
     key: 'verify',
     value: function verify(state, dice) {
-      return this.result('InitialTurn500', true);
+      var isFirstTurn = state.scoreboard[state.currentPlayer].length === 0;
+      // return false if the score is 0 or less than 500 points
+      if (isFirstTurn) {
+        if (state.turnScore === 0) {
+          return this.result('InitialTurn500', false);
+        } else if (state.turnScore.score < 500) {
+          return this.result('InitialTurn500', false);
+        }
+
+        return this.result('InitialTurn500', true);
+      }
+
+      // if this isn't the first turn, return null.
+      return this.result('InitialTurn500', null);
     }
   }]);
 
@@ -33421,6 +33515,44 @@ var InitialTurn500 = function (_Rule) {
 }(_Rule3.default);
 
 exports.default = InitialTurn500;
+
+/***/ }),
+/* 206 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Rule = __webpack_require__(203);
+
+var _Rule2 = _interopRequireDefault(_Rule);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Win = function () {
+  function Win() {
+    _classCallCheck(this, Win);
+  }
+
+  _createClass(Win, [{
+    key: 'verify',
+    value: function verify(state, dice) {
+      return this.result('Win', state.turnScore != 0 && state.turnScore > 10000);
+    }
+  }]);
+
+  return Win;
+}();
+
+exports.default = Win;
 
 /***/ })
 /******/ ]);

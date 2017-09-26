@@ -1,4 +1,5 @@
-import {filterRoll} from './filters';
+import {filterRoll, passedRule} from './filters';
+import {get} from 'lodash';
 
 /**
  * Player has a selected at least one die.
@@ -23,7 +24,11 @@ export function haveRolled(state) {
 }
 
 export function haveUsedAllDice(state) {
-  // return 
+  // return
+}
+
+export function needsInitialTurnScore(state) {
+  return passedRule('InitialTurn500', get(state.ruleResults, 'select.results', false)) === false
 }
 
 /**
@@ -35,12 +40,14 @@ export function noScoringErrors(state) {
   return state.turnScore === 0 || (state.turnScore != 0 && state.turnScore.errors.length === 0);
 }
 
+const cachedRules = {};
 export function verifyRules(rules, ...args) {
   let passed = true;
   const results = [];
 
   for (var i = 0, len = rules.length; i < len; i++) {
-    const thisRule = new rules[i];
+    const cached = get(cachedRules, rules[i].constructor.name);
+    const thisRule = (cached) ? cached : new rules[i];
     const thisResult = thisRule.verify(...args);
     results.push(thisResult);
     if (!thisResult.passed) {
