@@ -53,6 +53,10 @@ Potential state changes:
 - next (update score, update current player, fire new turn)
 */
 
+const MESSAGE_ROLL = 'Select "roll" to start your turn';
+const MESSAGE_SELECT = 'Select die to score.';
+const MESSAGE_SELECT_INITIAL = 'Select die to score. You must get 500 or more points on your first turn.';
+
 export default class Game extends React.Component {
   constructor() {
     super();
@@ -98,7 +102,7 @@ export default class Game extends React.Component {
       currentPlayer: 1,
 
       // the current message to display
-      currentMessage: 'Select "roll" to start your turn',
+      currentMessage: MESSAGE_ROLL,
 
       // collection of dice values (e.g. the dot-values only)
       dice: [],
@@ -144,9 +148,6 @@ export default class Game extends React.Component {
     if (this.state.turnScore !== 0 && this.state.turnScore.farkled === false) {
       const scoreboard = this.state.scoreboard;
       scoreboard[this.state.currentPlayer].push(this.state.turnScore);
-    }
-    else {
-      console.log({nextPlayer: this.state.turnScore});
     }
     this.state.currentPlayer = next;
 
@@ -224,7 +225,7 @@ export default class Game extends React.Component {
     }
 
     // const farkled = didFarkle(newDice);
-    const currentMessage = farkled ? 'Farkled!' : 'Select die to score';
+    const currentMessage = farkled ? 'Farkled!' : this.state.currentMessage;
     this.setState({
       dice: newDice,
       currentMessage,
@@ -257,9 +258,9 @@ export default class Game extends React.Component {
     const [passedRules, ruleResults] = verifyRules(this.rules.select, this.state);
     this.state.ruleResults = this.updateRuleResults('select', passedRules, ruleResults);
 
-    let currentMessage = this.state.currentMessage;
+    let currentMessage = MESSAGE_SELECT;
     if (passedRule('InitialTurn500', ruleResults) === false) {
-      currentMessage = 'Select die to score. You must get 500 or more points on your first turn.';
+      currentMessage = MESSAGE_SELECT_INITIAL;
     }
 
     this.setState({selectedDie: this.state.selectedDie, turnScore, currentMessage, ruleResults: this.state.ruleResults});

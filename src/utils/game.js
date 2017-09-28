@@ -1,5 +1,5 @@
 import {filterRoll, passedRule} from './filters';
-import {get} from 'lodash';
+import {get, has} from 'lodash';
 
 /**
  * Player has a selected at least one die.
@@ -27,6 +27,9 @@ export function haveUsedAllDice(state) {
   // return
 }
 
+/**
+ * Check if the initial turn rule passes.
+ */
 export function needsInitialTurnScore(state) {
   return passedRule('InitialTurn500', get(state.ruleResults, 'select.results', false)) === false
 }

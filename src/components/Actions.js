@@ -19,22 +19,24 @@ const ACTION_NONE = null;
 const ACTION_ROLL = 'ROLL';
 const ACTION_ROLL_AGAIN = 'ROLL_AGAIN';
 const ACTION_ROLL_AGAIN_NEXT = 'ROLL_AGAIN_NEXT';
-const ACTION_NEXT = 'ROLL_NEXT';
+const ACTION_NEXT = 'NEXT';
 
 /**
  * Render the actions available for the player.
- *
- *
  */
 export default class Actions extends React.Component {
-  getActions(state) {
-    if (state.farkled) {
-      return ACTION_NEXT;
-    }
 
+  /**
+   * Return the action constant for the current state.
+   */
+  getActions(state) {
     // if the player has not rolled yet...
     if (!haveRolled(state)) {
       return ACTION_ROLL;
+    }
+
+    if (state.farkled) {
+      return ACTION_NEXT;
     }
 
     // this will be true if the player still needs to pass their initial turn
@@ -46,17 +48,30 @@ export default class Actions extends React.Component {
     const haveSelected = haveDiceSelected(state);
     const noErrors = noScoringErrors(state);
 
-    if (!needsInitialTurnScore && allSelected && noErrors) {
+    // console.log({
+    //   needsInitialScore,
+    //   allSelected,
+    //   haveSelected,
+    //   noErrors,
+    // });
+
+    // if the player has their initial score, has selected all of the availalbe
+    // dice and there are no scoring errors, then they can roll again or keep
+    // their current score.
+    if (!needsInitialScore && allSelected && noErrors) {
       return ACTION_ROLL_AGAIN_NEXT;
     }
     // they have selected dice and they haven't selected them all
-    else if (!needsInitialTurnScore && haveSelected && !allSelected && noErrors) {
+    else if (!needsInitialScore && haveSelected && !allSelected && noErrors) {
       return ACTION_ROLL_AGAIN_NEXT;
     }
-    else if (needsInitialTurnScore && haveSelected) {
+    // player has started selecting dice, but they need to reach their
+    // initial turn score so they can only roll again
+    else if (needsInitialScore && haveSelected) {
       return ACTION_ROLL_AGAIN;
     }
 
+    // all else fails, we don't have any actions available...
     return ACTION_NONE;
   }
 

@@ -49,10 +49,41 @@ test('InitialTurn500 requires 500 points on first turn...', t => {
           1: [],
           2: [],
         },
+        turnScore: {score: 550},
+      },
+      result: true,
+    },
+    {
+      state: {
+        currentPlayer: 1,
+        scoreboard: {
+          1: [],
+          2: [],
+        },
         turnScore: {score: 100},
       },
       result: false,
     },
+    {
+      state: {
+        currentPlayer: 1,
+        dice: [3,3,2,2,4],
+        selectedDie: [
+          {roll: 1, value: 1},
+        ],
+        turnScore: {
+          errors: [],
+          items: [{dice: [1], score: 100}],
+          score: 100,
+          farkled: false,
+        },
+        scoreboard: {
+          1: [],
+          2: []
+        },
+      },
+      result: false,
+    }
   ].forEach((testCase, ix) => {
     const thisResult = verify(testCase.state, []);
     t.is(thisResult.passed, testCase.result, `Test #${ix} failed`);

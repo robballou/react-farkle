@@ -27,11 +27,11 @@ button.die.selected {
 header {
   width: 100%;
   background: #ddd;
-  padding: 1em 0 0 1em;
+  padding: 0;
   margin: 0; }
   header h1 {
     margin: 0;
-    padding: 0 0 .5em; }
+    padding: .5em 0 .5em .5em; }
 
 div.turnIndicator {
   font-weight: bold;
