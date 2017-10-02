@@ -1,14 +1,12 @@
 import test from 'ava';
-
-import React from 'react';
 import sinon from 'sinon';
 import { shallow, mount, configure } from 'enzyme';
-import { merge } from 'lodash';
-
 import Adapter from 'enzyme-adapter-react-15';
 
 configure({ adapter: new Adapter() });
 
+import React from 'react';
+import { merge } from 'lodash';
 import Game from '../src/components/Game';
 
 test('game.alreadySelected() returns false if the die was not selected', t => {
