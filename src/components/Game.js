@@ -8,6 +8,7 @@ import Messages from './Messages';
 import NextPlayer from './NextPlayer';
 import TurnIndicator from './TurnIndicator';
 import TurnScoreboard from './TurnScoreboard';
+import Log from './Log';
 
 import {getRandomIntInclusive} from '../utils/random';
 import {filterRoll, passedRule} from '../utils/filters';
@@ -21,46 +22,20 @@ import Farkled from '../rules/Farkled';
 import Win from '../rules/Win';
 import InitialTurn500 from '../rules/InitialTurn500';
 
-// - user rolls all the dice
-// - selects which die they want to use for their score
-// - if no score possible, they "farkled" and it's the next player's turn
-// - if remaining die, they can roll or just use the score
-
-/*
-Initial state/new turn state:
-
-- Show roll button
-- Show message for current player
-
-During turn loop:
-
-- Can select dice if they did not farkle
-  - Selecting die updates the in-turn score.
-  - Also need to validate that they *can* select the die. This probably
-    only needs to happen on the "next" button press (so they have the
-    opportunity of selecting multiple).
-- Can keep rolling dice if there are unselected dice...
-
-TODO toggling selected based on the die index won't work or needs to be updated
- in cases with subsequent rolls. E.g. use selects die index 0, then rolls
- remaining dice, we now have a new die index 0.
-
-Potential state changes:
-
-- initial/new turn (show roll button, show player message)
-- roll (show the dice, show the select die message)
-- select die (update the selected die, show the "roll" and "next" button)
-- next (update score, update current player, fire new turn)
-*/
-
+// Messages are used through this class... and we don't want to repeat and make
+// more places to need to change in the future...
 const MESSAGE_ROLL = 'Select "roll" to start your turn';
 const MESSAGE_SELECT = 'Select die to score.';
 const MESSAGE_SELECT_INITIAL = 'Select die to score. You must get 500 or more points on your first turn.';
 
+/**
+ * Parent game component and subcomponent logic.
+ */
 export default class Game extends React.Component {
   constructor() {
     super();
 
+    // get the initial state object
     this.state = this.getState();
 
     // these are the rules used for this game ... broken out by specific events
@@ -135,7 +110,19 @@ export default class Game extends React.Component {
         1: [],
         2: [],
       },
+
+      log: [],
     };
+  }
+
+  log(action, object) {
+    const objectItems = ['dice', 'selectedDie',];
+    const thisObject = pick(object, objectItems);
+    const entry = {action, object: thisObject};
+    const log = this.state.log;
+    log.push(entry);
+    this.setState({log});
+    return object;
   }
 
   /**
@@ -152,8 +139,8 @@ export default class Game extends React.Component {
     this.state.currentPlayer = next;
 
     // update the state...
-    const newState = merge(this.getState(), pick(this.state, ['scoreboard', 'currentPlayer']));
-    this.setState(newState);
+    const newState = merge(this.getState(), pick(this.state, ['scoreboard', 'currentPlayer', 'log']));
+    this.setState(this.log('nextPlayer', newState));
   }
 
   /**
@@ -189,6 +176,7 @@ export default class Game extends React.Component {
             onClick={this.selectDie.bind(this)} />
           <TurnScoreboard farkled={this.state.farkled} selected={this.state.selectedDie} value={this.state.turnScore} />
           <Scoreboard score={this.state.scoreboard} />
+          <Log entries={this.state.log} />
         </div>
       </div>
     );
@@ -204,12 +192,11 @@ export default class Game extends React.Component {
       this.setState({roll: ++this.state.roll, diceRemaining: this.state.diceRemaining});
     }
 
-    if (this.state.diceRemaining == 0) {
-      this.state.diceRemaining = 6;
-    }
+    // set the remaining dice... and reset it to 6 if we're back at 0 dice...
+    const diceRemaining = (this.state.diceRemaining === 0) ? 6 : this.state.diceRemaining;
 
     const newDice = [];
-    for (var i = 0; i < this.state.diceRemaining; i++) {
+    for (var i = 0; i < diceRemaining; i++) {
       newDice.push(getRandomIntInclusive(1,6));
     }
 
@@ -226,13 +213,14 @@ export default class Game extends React.Component {
 
     // const farkled = didFarkle(newDice);
     const currentMessage = farkled ? 'Farkled!' : this.state.currentMessage;
-    this.setState({
+    this.setState(this.log('roll', {
       dice: newDice,
+      diceRemaining,
       currentMessage,
       farkled,
       turnScore,
       ruleResults: this.updateRuleResults('roll', passedRules, ruleResults),
-    });
+    }));
   }
 
   /**
@@ -263,7 +251,7 @@ export default class Game extends React.Component {
       currentMessage = MESSAGE_SELECT_INITIAL;
     }
 
-    this.setState({selectedDie: this.state.selectedDie, turnScore, currentMessage, ruleResults: this.state.ruleResults});
+    this.setState(this.log('select', {selectedDie: this.state.selectedDie, turnScore, currentMessage, ruleResults: this.state.ruleResults}));
   }
 
   /**

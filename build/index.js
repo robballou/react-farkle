@@ -19683,10 +19683,13 @@ function haveRolled(state) {
   return state.dice.length !== 0;
 }
 
-function haveUsedAllDice(state) {
-  // return
-}
+function haveUsedAllDice(state) {}
+// return
 
+
+/**
+ * Check if the initial turn rule passes.
+ */
 function needsInitialTurnScore(state) {
   return (0, _filters.passedRule)('InitialTurn500', (0, _lodash.get)(state.ruleResults, 'select.results', false)) === false;
 }
@@ -32291,6 +32294,10 @@ var _TurnScoreboard = __webpack_require__(201);
 
 var _TurnScoreboard2 = _interopRequireDefault(_TurnScoreboard);
 
+var _Log = __webpack_require__(207);
+
+var _Log2 = _interopRequireDefault(_Log);
+
 var _random = __webpack_require__(202);
 
 var _filters = __webpack_require__(34);
@@ -32319,41 +32326,15 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-// - user rolls all the dice
-// - selects which die they want to use for their score
-// - if no score possible, they "farkled" and it's the next player's turn
-// - if remaining die, they can roll or just use the score
-
-/*
-Initial state/new turn state:
-
-- Show roll button
-- Show message for current player
-
-During turn loop:
-
-- Can select dice if they did not farkle
-  - Selecting die updates the in-turn score.
-  - Also need to validate that they *can* select the die. This probably
-    only needs to happen on the "next" button press (so they have the
-    opportunity of selecting multiple).
-- Can keep rolling dice if there are unselected dice...
-
-TODO toggling selected based on the die index won't work or needs to be updated
- in cases with subsequent rolls. E.g. use selects die index 0, then rolls
- remaining dice, we now have a new die index 0.
-
-Potential state changes:
-
-- initial/new turn (show roll button, show player message)
-- roll (show the dice, show the select die message)
-- select die (update the selected die, show the "roll" and "next" button)
-- next (update score, update current player, fire new turn)
-*/
-
+// Messages are used through this class... and we don't want to repeat and make
+// more places to need to change in the future...
 var MESSAGE_ROLL = 'Select "roll" to start your turn';
 var MESSAGE_SELECT = 'Select die to score.';
 var MESSAGE_SELECT_INITIAL = 'Select die to score. You must get 500 or more points on your first turn.';
+
+/**
+ * Parent game component and subcomponent logic.
+ */
 
 var Game = function (_React$Component) {
   _inherits(Game, _React$Component);
@@ -32361,6 +32342,7 @@ var Game = function (_React$Component) {
   function Game() {
     _classCallCheck(this, Game);
 
+    // get the initial state object
     var _this = _possibleConstructorReturn(this, (Game.__proto__ || Object.getPrototypeOf(Game)).call(this));
 
     _this.state = _this.getState();
@@ -32440,8 +32422,21 @@ var Game = function (_React$Component) {
         scoreboard: {
           1: [],
           2: []
-        }
+        },
+
+        log: []
       };
+    }
+  }, {
+    key: 'log',
+    value: function log(action, object) {
+      var objectItems = ['dice', 'selectedDie'];
+      var thisObject = (0, _lodash.pick)(object, objectItems);
+      var entry = { action: action, object: thisObject };
+      var log = this.state.log;
+      log.push(entry);
+      this.setState({ log: log });
+      return object;
     }
 
     /**
@@ -32457,14 +32452,12 @@ var Game = function (_React$Component) {
       if (this.state.turnScore !== 0 && this.state.turnScore.farkled === false) {
         var scoreboard = this.state.scoreboard;
         scoreboard[this.state.currentPlayer].push(this.state.turnScore);
-      } else {
-        console.log({ nextPlayer: this.state.turnScore });
       }
       this.state.currentPlayer = next;
 
       // update the state...
-      var newState = (0, _lodash.merge)(this.getState(), (0, _lodash.pick)(this.state, ['scoreboard', 'currentPlayer']));
-      this.setState(newState);
+      var newState = (0, _lodash.merge)(this.getState(), (0, _lodash.pick)(this.state, ['scoreboard', 'currentPlayer', 'log']));
+      this.setState(this.log('nextPlayer', newState));
     }
 
     /**
@@ -32514,7 +32507,8 @@ var Game = function (_React$Component) {
             farkled: this.state.farkled,
             onClick: this.selectDie.bind(this) }),
           _react2.default.createElement(_TurnScoreboard2.default, { farkled: this.state.farkled, selected: this.state.selectedDie, value: this.state.turnScore }),
-          _react2.default.createElement(_Scoreboard2.default, { score: this.state.scoreboard })
+          _react2.default.createElement(_Scoreboard2.default, { score: this.state.scoreboard }),
+          _react2.default.createElement(_Log2.default, { entries: this.state.log })
         )
       );
     }
@@ -32532,12 +32526,11 @@ var Game = function (_React$Component) {
         this.setState({ roll: ++this.state.roll, diceRemaining: this.state.diceRemaining });
       }
 
-      if (this.state.diceRemaining == 0) {
-        this.state.diceRemaining = 6;
-      }
+      // set the remaining dice... and reset it to 6 if we're back at 0 dice...
+      var diceRemaining = this.state.diceRemaining === 0 ? 6 : this.state.diceRemaining;
 
       var newDice = [];
-      for (var i = 0; i < this.state.diceRemaining; i++) {
+      for (var i = 0; i < diceRemaining; i++) {
         newDice.push((0, _random.getRandomIntInclusive)(1, 6));
       }
 
@@ -32560,13 +32553,14 @@ var Game = function (_React$Component) {
 
       // const farkled = didFarkle(newDice);
       var currentMessage = farkled ? 'Farkled!' : this.state.currentMessage;
-      this.setState({
+      this.setState(this.log('roll', {
         dice: newDice,
+        diceRemaining: diceRemaining,
         currentMessage: currentMessage,
         farkled: farkled,
         turnScore: turnScore,
         ruleResults: this.updateRuleResults('roll', passedRules, ruleResults)
-      });
+      }));
     }
 
     /**
@@ -32604,7 +32598,7 @@ var Game = function (_React$Component) {
         currentMessage = MESSAGE_SELECT_INITIAL;
       }
 
-      this.setState({ selectedDie: this.state.selectedDie, turnScore: turnScore, currentMessage: currentMessage, ruleResults: this.state.ruleResults });
+      this.setState(this.log('select', { selectedDie: this.state.selectedDie, turnScore: turnScore, currentMessage: currentMessage, ruleResults: this.state.ruleResults }));
     }
 
     /**
@@ -32796,7 +32790,8 @@ var Actions = function (_React$Component) {
       else if (!needsInitialScore && haveSelected && !allSelected && noErrors) {
           return ACTION_ROLL_AGAIN_NEXT;
         }
-        // they need to reach their initial turn score so they can only roll again
+        // player has started selecting dice, but they need to reach their
+        // initial turn score so they can only roll again
         else if (needsInitialScore && haveSelected) {
             return ACTION_ROLL_AGAIN;
           }
@@ -33065,22 +33060,25 @@ var Scoreboard = function (_React$Component) {
   }
 
   _createClass(Scoreboard, [{
-    key: "render",
+    key: 'scoreItems',
+    value: function scoreItems(items, key) {
+      var index = 0;
+      return items.map(function (turn) {
+        var thisKey = '' + key + index;
+        index++;
+        return _react2.default.createElement(
+          'li',
+          { key: thisKey },
+          turn.score
+        );
+      });
+    }
+  }, {
+    key: 'render',
     value: function render() {
-      var player1ScoreItems = this.props.score[1].map(function (turn, ix) {
-        return _react2.default.createElement(
-          "li",
-          { key: "player1{ix}" },
-          turn.score
-        );
-      });
-      var player2ScoreItems = this.props.score[2].map(function (turn, ix) {
-        return _react2.default.createElement(
-          "li",
-          { key: "player2{ix}" },
-          turn.score
-        );
-      });
+      // get the list of each player's score items...
+      var player1ScoreItems = this.scoreItems(this.props.score[1], 'player1');
+      var player2ScoreItems = this.scoreItems(this.props.score[2], 'player2');
 
       var player1Total = this.props.score[1].reduce(function (carry, turn) {
         return carry + turn.score;
@@ -33090,38 +33088,38 @@ var Scoreboard = function (_React$Component) {
       }, 0);
 
       return _react2.default.createElement(
-        "div",
-        { className: "scoreboard" },
+        'div',
+        { className: 'scoreboard' },
         _react2.default.createElement(
-          "div",
-          { className: "scoreboard--player" },
+          'div',
+          { className: 'scoreboard--player' },
           _react2.default.createElement(
-            "h3",
+            'h3',
             null,
-            "Player 1"
+            'Player 1'
           ),
           _react2.default.createElement(
-            "ul",
+            'ul',
             null,
             player1ScoreItems
           ),
-          "Total: ",
+          'Total: ',
           player1Total
         ),
         _react2.default.createElement(
-          "div",
-          { className: "scoreboard--player" },
+          'div',
+          { className: 'scoreboard--player' },
           _react2.default.createElement(
-            "h3",
+            'h3',
             null,
-            "Player 2"
+            'Player 2'
           ),
           _react2.default.createElement(
-            "ul",
+            'ul',
             null,
             player2ScoreItems
           ),
-          "Total: ",
+          'Total: ',
           player2Total
         )
       );
@@ -33553,20 +33551,23 @@ var InitialTurn500 = function (_Rule) {
     key: 'verify',
     value: function verify(state, dice) {
       var isFirstTurn = state.scoreboard[state.currentPlayer].length === 0;
-      // return false if the score is 0 or less than 500 points
-      if (isFirstTurn) {
-        if (state.turnScore === 0) {
-          return this.result('InitialTurn500', false);
-        } else if (state.turnScore.score < 500) {
-          return this.result('InitialTurn500', false);
-        }
+      var ruleName = 'InitialTurn500';
 
-        // score is >= 500 so they have met this rule requirement
-        return this.result('InitialTurn500', true);
+      // return null if this is not the first turn (e.g., we don't care whether
+      // this rule passes anymore)
+      if (!isFirstTurn) {
+        return this.result(ruleName, null);
       }
 
-      // if this isn't the first turn, return null.
-      return this.result('InitialTurn500', null);
+      // return false if the score is 0 or less than 500 points
+      if (state.turnScore === 0) {
+        return this.result(ruleName, false);
+      } else if (state.turnScore.score < 500) {
+        return this.result(ruleName, false);
+      }
+
+      // score is >= 500 so they have met this rule requirement
+      return this.result(ruleName, true);
     }
   }]);
 
@@ -33574,6 +33575,600 @@ var InitialTurn500 = function (_Rule) {
 }(_Rule3.default);
 
 exports.default = InitialTurn500;
+
+/***/ }),
+/* 207 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _react = __webpack_require__(9);
+
+var _react2 = _interopRequireDefault(_react);
+
+var _lzString = __webpack_require__(208);
+
+var _lzString2 = _interopRequireDefault(_lzString);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Log = function (_React$Component) {
+  _inherits(Log, _React$Component);
+
+  function Log() {
+    _classCallCheck(this, Log);
+
+    return _possibleConstructorReturn(this, (Log.__proto__ || Object.getPrototypeOf(Log)).apply(this, arguments));
+  }
+
+  _createClass(Log, [{
+    key: 'render',
+    value: function render() {
+      var entries = JSON.stringify(this.props.entries, null, 2);
+      var compressedLog = _lzString2.default.compressToEncodedURIComponent(entries);
+      var logLink = "?log=" + compressedLog;
+      return _react2.default.createElement(
+        'div',
+        { className: 'log' },
+        _react2.default.createElement(
+          'a',
+          { href: logLink },
+          'Copy this link'
+        ),
+        _react2.default.createElement(
+          'pre',
+          null,
+          entries
+        )
+      );
+    }
+  }]);
+
+  return Log;
+}(_react2.default.Component);
+
+exports.default = Log;
+
+/***/ }),
+/* 208 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+var __WEBPACK_AMD_DEFINE_RESULT__;
+
+// Copyright (c) 2013 Pieroxy <pieroxy@pieroxy.net>
+// This work is free. You can redistribute it and/or modify it
+// under the terms of the WTFPL, Version 2
+// For more information see LICENSE.txt or http://www.wtfpl.net/
+//
+// For more information, the home page:
+// http://pieroxy.net/blog/pages/lz-string/testing.html
+//
+// LZ-based compression algorithm, version 1.4.4
+var LZString = function () {
+
+  // private property
+  var f = String.fromCharCode;
+  var keyStrBase64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  var keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+  var baseReverseDic = {};
+
+  function getBaseValue(alphabet, character) {
+    if (!baseReverseDic[alphabet]) {
+      baseReverseDic[alphabet] = {};
+      for (var i = 0; i < alphabet.length; i++) {
+        baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+      }
+    }
+    return baseReverseDic[alphabet][character];
+  }
+
+  var LZString = {
+    compressToBase64: function compressToBase64(input) {
+      if (input == null) return "";
+      var res = LZString._compress(input, 6, function (a) {
+        return keyStrBase64.charAt(a);
+      });
+      switch (res.length % 4) {// To produce valid Base64
+        default: // When could this happen ?
+        case 0:
+          return res;
+        case 1:
+          return res + "===";
+        case 2:
+          return res + "==";
+        case 3:
+          return res + "=";
+      }
+    },
+
+    decompressFromBase64: function decompressFromBase64(input) {
+      if (input == null) return "";
+      if (input == "") return null;
+      return LZString._decompress(input.length, 32, function (index) {
+        return getBaseValue(keyStrBase64, input.charAt(index));
+      });
+    },
+
+    compressToUTF16: function compressToUTF16(input) {
+      if (input == null) return "";
+      return LZString._compress(input, 15, function (a) {
+        return f(a + 32);
+      }) + " ";
+    },
+
+    decompressFromUTF16: function decompressFromUTF16(compressed) {
+      if (compressed == null) return "";
+      if (compressed == "") return null;
+      return LZString._decompress(compressed.length, 16384, function (index) {
+        return compressed.charCodeAt(index) - 32;
+      });
+    },
+
+    //compress into uint8array (UCS-2 big endian format)
+    compressToUint8Array: function compressToUint8Array(uncompressed) {
+      var compressed = LZString.compress(uncompressed);
+      var buf = new Uint8Array(compressed.length * 2); // 2 bytes per character
+
+      for (var i = 0, TotalLen = compressed.length; i < TotalLen; i++) {
+        var current_value = compressed.charCodeAt(i);
+        buf[i * 2] = current_value >>> 8;
+        buf[i * 2 + 1] = current_value % 256;
+      }
+      return buf;
+    },
+
+    //decompress from uint8array (UCS-2 big endian format)
+    decompressFromUint8Array: function decompressFromUint8Array(compressed) {
+      if (compressed === null || compressed === undefined) {
+        return LZString.decompress(compressed);
+      } else {
+        var buf = new Array(compressed.length / 2); // 2 bytes per character
+        for (var i = 0, TotalLen = buf.length; i < TotalLen; i++) {
+          buf[i] = compressed[i * 2] * 256 + compressed[i * 2 + 1];
+        }
+
+        var result = [];
+        buf.forEach(function (c) {
+          result.push(f(c));
+        });
+        return LZString.decompress(result.join(''));
+      }
+    },
+
+    //compress into a string that is already URI encoded
+    compressToEncodedURIComponent: function compressToEncodedURIComponent(input) {
+      if (input == null) return "";
+      return LZString._compress(input, 6, function (a) {
+        return keyStrUriSafe.charAt(a);
+      });
+    },
+
+    //decompress from an output of compressToEncodedURIComponent
+    decompressFromEncodedURIComponent: function decompressFromEncodedURIComponent(input) {
+      if (input == null) return "";
+      if (input == "") return null;
+      input = input.replace(/ /g, "+");
+      return LZString._decompress(input.length, 32, function (index) {
+        return getBaseValue(keyStrUriSafe, input.charAt(index));
+      });
+    },
+
+    compress: function compress(uncompressed) {
+      return LZString._compress(uncompressed, 16, function (a) {
+        return f(a);
+      });
+    },
+    _compress: function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+      if (uncompressed == null) return "";
+      var i,
+          value,
+          context_dictionary = {},
+          context_dictionaryToCreate = {},
+          context_c = "",
+          context_wc = "",
+          context_w = "",
+          context_enlargeIn = 2,
+          // Compensate for the first entry which should not count
+      context_dictSize = 3,
+          context_numBits = 2,
+          context_data = [],
+          context_data_val = 0,
+          context_data_position = 0,
+          ii;
+
+      for (ii = 0; ii < uncompressed.length; ii += 1) {
+        context_c = uncompressed.charAt(ii);
+        if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+          context_dictionary[context_c] = context_dictSize++;
+          context_dictionaryToCreate[context_c] = true;
+        }
+
+        context_wc = context_w + context_c;
+        if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+          context_w = context_wc;
+        } else {
+          if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+            if (context_w.charCodeAt(0) < 256) {
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = context_data_val << 1;
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+              }
+              value = context_w.charCodeAt(0);
+              for (i = 0; i < 8; i++) {
+                context_data_val = context_data_val << 1 | value & 1;
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = value >> 1;
+              }
+            } else {
+              value = 1;
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = context_data_val << 1 | value;
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = 0;
+              }
+              value = context_w.charCodeAt(0);
+              for (i = 0; i < 16; i++) {
+                context_data_val = context_data_val << 1 | value & 1;
+                if (context_data_position == bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = value >> 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn == 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            delete context_dictionaryToCreate[context_w];
+          } else {
+            value = context_dictionary[context_w];
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = context_data_val << 1 | value & 1;
+              if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn == 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+          // Add wc to the dictionary.
+          context_dictionary[context_wc] = context_dictSize++;
+          context_w = String(context_c);
+        }
+      }
+
+      // Output the code for w.
+      if (context_w !== "") {
+        if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+          if (context_w.charCodeAt(0) < 256) {
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = context_data_val << 1;
+              if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 8; i++) {
+              context_data_val = context_data_val << 1 | value & 1;
+              if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = value >> 1;
+            }
+          } else {
+            value = 1;
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = context_data_val << 1 | value;
+              if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = 0;
+            }
+            value = context_w.charCodeAt(0);
+            for (i = 0; i < 16; i++) {
+              context_data_val = context_data_val << 1 | value & 1;
+              if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn == 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+          delete context_dictionaryToCreate[context_w];
+        } else {
+          value = context_dictionary[context_w];
+          for (i = 0; i < context_numBits; i++) {
+            context_data_val = context_data_val << 1 | value & 1;
+            if (context_data_position == bitsPerChar - 1) {
+              context_data_position = 0;
+              context_data.push(getCharFromInt(context_data_val));
+              context_data_val = 0;
+            } else {
+              context_data_position++;
+            }
+            value = value >> 1;
+          }
+        }
+        context_enlargeIn--;
+        if (context_enlargeIn == 0) {
+          context_enlargeIn = Math.pow(2, context_numBits);
+          context_numBits++;
+        }
+      }
+
+      // Mark the end of the stream
+      value = 2;
+      for (i = 0; i < context_numBits; i++) {
+        context_data_val = context_data_val << 1 | value & 1;
+        if (context_data_position == bitsPerChar - 1) {
+          context_data_position = 0;
+          context_data.push(getCharFromInt(context_data_val));
+          context_data_val = 0;
+        } else {
+          context_data_position++;
+        }
+        value = value >> 1;
+      }
+
+      // Flush the last char
+      while (true) {
+        context_data_val = context_data_val << 1;
+        if (context_data_position == bitsPerChar - 1) {
+          context_data.push(getCharFromInt(context_data_val));
+          break;
+        } else context_data_position++;
+      }
+      return context_data.join('');
+    },
+
+    decompress: function decompress(compressed) {
+      if (compressed == null) return "";
+      if (compressed == "") return null;
+      return LZString._decompress(compressed.length, 32768, function (index) {
+        return compressed.charCodeAt(index);
+      });
+    },
+
+    _decompress: function _decompress(length, resetValue, getNextValue) {
+      var dictionary = [],
+          next,
+          enlargeIn = 4,
+          dictSize = 4,
+          numBits = 3,
+          entry = "",
+          result = [],
+          i,
+          w,
+          bits,
+          resb,
+          maxpower,
+          power,
+          c,
+          data = { val: getNextValue(0), position: resetValue, index: 1 };
+
+      for (i = 0; i < 3; i += 1) {
+        dictionary[i] = i;
+      }
+
+      bits = 0;
+      maxpower = Math.pow(2, 2);
+      power = 1;
+      while (power != maxpower) {
+        resb = data.val & data.position;
+        data.position >>= 1;
+        if (data.position == 0) {
+          data.position = resetValue;
+          data.val = getNextValue(data.index++);
+        }
+        bits |= (resb > 0 ? 1 : 0) * power;
+        power <<= 1;
+      }
+
+      switch (next = bits) {
+        case 0:
+          bits = 0;
+          maxpower = Math.pow(2, 8);
+          power = 1;
+          while (power != maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          c = f(bits);
+          break;
+        case 1:
+          bits = 0;
+          maxpower = Math.pow(2, 16);
+          power = 1;
+          while (power != maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position == 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+          c = f(bits);
+          break;
+        case 2:
+          return "";
+      }
+      dictionary[3] = c;
+      w = c;
+      result.push(c);
+      while (true) {
+        if (data.index > length) {
+          return "";
+        }
+
+        bits = 0;
+        maxpower = Math.pow(2, numBits);
+        power = 1;
+        while (power != maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position == 0) {
+            data.position = resetValue;
+            data.val = getNextValue(data.index++);
+          }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+
+        switch (c = bits) {
+          case 0:
+            bits = 0;
+            maxpower = Math.pow(2, 8);
+            power = 1;
+            while (power != maxpower) {
+              resb = data.val & data.position;
+              data.position >>= 1;
+              if (data.position == 0) {
+                data.position = resetValue;
+                data.val = getNextValue(data.index++);
+              }
+              bits |= (resb > 0 ? 1 : 0) * power;
+              power <<= 1;
+            }
+
+            dictionary[dictSize++] = f(bits);
+            c = dictSize - 1;
+            enlargeIn--;
+            break;
+          case 1:
+            bits = 0;
+            maxpower = Math.pow(2, 16);
+            power = 1;
+            while (power != maxpower) {
+              resb = data.val & data.position;
+              data.position >>= 1;
+              if (data.position == 0) {
+                data.position = resetValue;
+                data.val = getNextValue(data.index++);
+              }
+              bits |= (resb > 0 ? 1 : 0) * power;
+              power <<= 1;
+            }
+            dictionary[dictSize++] = f(bits);
+            c = dictSize - 1;
+            enlargeIn--;
+            break;
+          case 2:
+            return result.join('');
+        }
+
+        if (enlargeIn == 0) {
+          enlargeIn = Math.pow(2, numBits);
+          numBits++;
+        }
+
+        if (dictionary[c]) {
+          entry = dictionary[c];
+        } else {
+          if (c === dictSize) {
+            entry = w + w.charAt(0);
+          } else {
+            return null;
+          }
+        }
+        result.push(entry);
+
+        // Add w+entry[0] to the dictionary.
+        dictionary[dictSize++] = w + entry.charAt(0);
+        enlargeIn--;
+
+        w = entry;
+
+        if (enlargeIn == 0) {
+          enlargeIn = Math.pow(2, numBits);
+          numBits++;
+        }
+      }
+    }
+  };
+  return LZString;
+}();
+
+if (true) {
+  !(__WEBPACK_AMD_DEFINE_RESULT__ = function () {
+    return LZString;
+  }.call(exports, __webpack_require__, exports, module),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+} else if (typeof module !== 'undefined' && module != null) {
+  module.exports = LZString;
+}
 
 /***/ })
 /******/ ]);

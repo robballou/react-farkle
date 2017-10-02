@@ -33,6 +33,18 @@ header {
     margin: 0;
     padding: .5em 0 .5em .5em; }
 
+.log {
+  margin-top: 1em;
+  border-top: 1px solid #333;
+  padding-top: 1em; }
+
+pre {
+  background: #eee;
+  color: #666;
+  font-size: 0.8em;
+  height: 20em;
+  overflow: scroll; }
+
 div.turnIndicator {
   font-weight: bold;
   padding-bottom: 1em; }
