@@ -27,6 +27,7 @@ import InitialTurn500 from '../rules/InitialTurn500';
 const MESSAGE_ROLL = 'Select "roll" to start your turn';
 const MESSAGE_SELECT = 'Select die to score.';
 const MESSAGE_SELECT_INITIAL = 'Select die to score. You must get 500 or more points on your first turn.';
+const MESSAGE_SELECT_ERROR = 'Note: Currently you have selected dice that do not complete a correct score.';
 
 /**
  * Parent game component and subcomponent logic.
@@ -169,10 +170,7 @@ export default class Game extends React.Component {
               />
           </div>
           <PlayerRoll
-            roll={this.state.roll}
-            selected={this.state.selectedDie}
-            value={this.state.dice}
-            farkled={this.state.farkled}
+            gameState={this.state}
             onClick={this.selectDie.bind(this)} />
           <TurnScoreboard farkled={this.state.farkled} selected={this.state.selectedDie} value={this.state.turnScore} />
           <Scoreboard score={this.state.scoreboard} />
@@ -250,8 +248,12 @@ export default class Game extends React.Component {
     if (passedRule('InitialTurn500', ruleResults) === false) {
       currentMessage = MESSAGE_SELECT_INITIAL;
     }
+    const messages = [];
+    if (turnScore.errors.length > 0) {
+      messages.push(MESSAGE_SELECT_ERROR);
+    }
 
-    this.setState(this.log('select', {selectedDie: this.state.selectedDie, turnScore, currentMessage, ruleResults: this.state.ruleResults}));
+    this.setState(this.log('select', {selectedDie: this.state.selectedDie, turnScore, currentMessage, messages, ruleResults: this.state.ruleResults}));
   }
 
   /**

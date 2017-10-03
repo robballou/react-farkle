@@ -22,7 +22,10 @@ const ACTION_ROLL_AGAIN_NEXT = 'ROLL_AGAIN_NEXT';
 const ACTION_NEXT = 'NEXT';
 
 /**
- * Render the actions available for the player.
+ * Render the action buttons available for the player.
+ *
+ * The actions available change greatly depending on what the current roll
+ * contains, what the player has selected, etc.
  */
 export default class Actions extends React.Component {
 
@@ -67,7 +70,7 @@ export default class Actions extends React.Component {
     }
     // player has started selecting dice, but they need to reach their
     // initial turn score so they can only roll again
-    else if (needsInitialScore && haveSelected) {
+    else if (needsInitialScore && haveSelected && noErrors) {
       return ACTION_ROLL_AGAIN;
     }
 

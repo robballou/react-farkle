@@ -1,0 +1,20 @@
+.scoreboard {
+  background: #eee;
+  padding: .25em;
+}
+
+.scores {
+  display: flex;
+  flex-direction: row;
+
+  .scoreboard--player {
+    flex-grow: 1;
+    border-left: 1px solid #333;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+    padding: 0.5em;
+  }
+  .scoreboard--player:last-child {
+    border-right: 1px solid #333;
+  }
+}

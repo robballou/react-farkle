@@ -5,8 +5,17 @@ export default class Die extends React.Component {
     const dice = [
       '','⚀','⚁','⚂','⚃','⚄','⚅'
     ];
+
+    const classNames = ['die'];
+    if (this.props.selected) {
+      classNames.push('selected');
+    }
+    if (this.props.selectable === false) {
+      classNames.push('disabled');
+    }
+
     return (
-      <button className={(this.props.selected) ? 'die selected' : 'die'} onClick={() => this.props.onClick(this.props.value)}>
+      <button className={classNames.join(' ')} onClick={() => this.props.onClick(this.props.value)}>
         {dice[this.props.value]}
       </button>
     );

@@ -16142,6 +16142,9 @@ function turnScoreObject() {
   return { score: 0, items: [], errors: [], farkled: false };
 }
 
+/**
+ * Score multiple rolls.
+ */
 function score(allDiceRolls) {
   var rolls = (0, _lodash.groupBy)(allDiceRolls, function (die) {
     return (0, _lodash.isNumber)(die) ? 0 : die.roll;
@@ -16222,7 +16225,8 @@ function scoreSpecials(dice) {
 
   // in a nutshell, we need to check for special value scores starting at the
   // high scoring varieties down to the lower scoring ones...
-  if (diceValues.length === 6) {
+  var diceValuesLength = diceValues.length;
+  if (diceValuesLength === 6) {
     // check for six of a kind = 4x the 3-of-a-kind score.
     if (hasSixOfAKind(diceValues)) {
       var sixOfAKind = (0, _lodash.keys)((0, _lodash.pickBy)(counts, function (v) {
@@ -16235,49 +16239,56 @@ function scoreSpecials(dice) {
         specialScore += itemScore;
       }
     }
-    // straight = 1000
-    else if (isStraight(diceValues)) {
-        scoreItems.push({ dice: diceValues, score: 1000 });
+    // two triples = 2500
+    else if (getThreeOfAKind(diceValues).length === 2) {
+        scoreItems.push({ dice: diceValues, score: 2500 });
         thisDice = [];
-        specialScore += 1000;
-      } else if (hasThreeDoubles(diceValues)) {
-        scoreItems.push({ dice: diceValues, score: 500 });
-        thisDice = [];
-        specialScore += 500;
+        specialScore += 2500;
       }
+      // straight = 1000
+      else if (isStraight(diceValues)) {
+          scoreItems.push({ dice: diceValues, score: 1000 });
+          thisDice = [];
+          specialScore += 1000;
+        } else if (hasThreeDoubles(diceValues)) {
+          scoreItems.push({ dice: diceValues, score: 500 });
+          thisDice = [];
+          specialScore += 500;
+        }
   }
 
-  if (diceValues.length >= 5) {
-    var fiveOfAKind = getFiveOfAKind(diceValues);
-    fiveOfAKind.forEach(function (quin) {
-      scoreItems.push({ dice: [quin, quin, quin, quin, quin], score: threeOfAKindScores[quin] * 3 });
-      thisDice = thisDice.filter(function (die) {
-        return die.value != quin;
+  if (thisDice.length > 0) {
+    if (diceValuesLength >= 5) {
+      var fiveOfAKind = getFiveOfAKind(diceValues);
+      fiveOfAKind.forEach(function (quin) {
+        scoreItems.push({ dice: [quin, quin, quin, quin, quin], score: threeOfAKindScores[quin] * 3 });
+        thisDice = thisDice.filter(function (die) {
+          return die.value != quin;
+        });
+        specialScore += threeOfAKindScores[quin] * 3;
       });
-      specialScore += threeOfAKindScores[quin] * 3;
-    });
-  }
+    }
+    if (diceValuesLength >= 4) {
+      var fourOfAKind = getFourOfAKind(diceValues);
+      fourOfAKind.forEach(function (quad) {
+        scoreItems.push({ dice: [quad, quad, quad, quad], score: threeOfAKindScores[quad] * 2 });
+        thisDice = thisDice.filter(function (die) {
+          return die.value != quad;
+        });
+        specialScore += threeOfAKindScores[quad] * 2;
+      });
+    }
 
-  if (diceValues.length >= 4) {
-    var fourOfAKind = getFourOfAKind(diceValues);
-    fourOfAKind.forEach(function (quad) {
-      scoreItems.push({ dice: [quad, quad, quad, quad], score: threeOfAKindScores[quad] * 2 });
-      thisDice = thisDice.filter(function (die) {
-        return die.value != quad;
+    if (diceValuesLength >= 3) {
+      var threeOfAKind = getThreeOfAKind(diceValues);
+      threeOfAKind.forEach(function (triple) {
+        scoreItems.push({ dice: [triple, triple, triple], score: threeOfAKindScores[triple] });
+        thisDice = thisDice.filter(function (die) {
+          return die.value != triple;
+        });
+        specialScore += threeOfAKindScores[triple];
       });
-      specialScore += threeOfAKindScores[quad] * 2;
-    });
-  }
-
-  if (diceValues.length >= 3) {
-    var threeOfAKind = getThreeOfAKind(diceValues);
-    threeOfAKind.forEach(function (triple) {
-      scoreItems.push({ dice: [triple, triple, triple], score: threeOfAKindScores[triple] });
-      thisDice = thisDice.filter(function (die) {
-        return die.value != triple;
-      });
-      specialScore += threeOfAKindScores[triple];
-    });
+    }
   }
 
   return [specialScore, scoreItems, thisDice];
@@ -16298,7 +16309,9 @@ function getNumberOfAKind(dice, n) {
   var counts = dieCount(dice);
   return (0, _lodash.keys)((0, _lodash.pickBy)(counts, function (count) {
     return count === n;
-  })).map(parseInt);
+  })).map(function (num) {
+    return parseInt(num);
+  });
 }
 
 function getThreeOfAKind(dice) {
@@ -32331,6 +32344,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var MESSAGE_ROLL = 'Select "roll" to start your turn';
 var MESSAGE_SELECT = 'Select die to score.';
 var MESSAGE_SELECT_INITIAL = 'Select die to score. You must get 500 or more points on your first turn.';
+var MESSAGE_SELECT_ERROR = 'Note: Currently you have selected dice that do not complete a correct score.';
 
 /**
  * Parent game component and subcomponent logic.
@@ -32501,10 +32515,7 @@ var Game = function (_React$Component) {
             })
           ),
           _react2.default.createElement(_PlayerRoll2.default, {
-            roll: this.state.roll,
-            selected: this.state.selectedDie,
-            value: this.state.dice,
-            farkled: this.state.farkled,
+            gameState: this.state,
             onClick: this.selectDie.bind(this) }),
           _react2.default.createElement(_TurnScoreboard2.default, { farkled: this.state.farkled, selected: this.state.selectedDie, value: this.state.turnScore }),
           _react2.default.createElement(_Scoreboard2.default, { score: this.state.scoreboard }),
@@ -32597,8 +32608,12 @@ var Game = function (_React$Component) {
       if ((0, _filters.passedRule)('InitialTurn500', ruleResults) === false) {
         currentMessage = MESSAGE_SELECT_INITIAL;
       }
+      var messages = [];
+      if (turnScore.errors.length > 0) {
+        messages.push(MESSAGE_SELECT_ERROR);
+      }
 
-      this.setState(this.log('select', { selectedDie: this.state.selectedDie, turnScore: turnScore, currentMessage: currentMessage, ruleResults: this.state.ruleResults }));
+      this.setState(this.log('select', { selectedDie: this.state.selectedDie, turnScore: turnScore, currentMessage: currentMessage, messages: messages, ruleResults: this.state.ruleResults }));
     }
 
     /**
@@ -32735,7 +32750,10 @@ var ACTION_ROLL_AGAIN_NEXT = 'ROLL_AGAIN_NEXT';
 var ACTION_NEXT = 'NEXT';
 
 /**
- * Render the actions available for the player.
+ * Render the action buttons available for the player.
+ *
+ * The actions available change greatly depending on what the current roll
+ * contains, what the player has selected, etc.
  */
 
 var Actions = function (_React$Component) {
@@ -32792,7 +32810,7 @@ var Actions = function (_React$Component) {
         }
         // player has started selecting dice, but they need to reach their
         // initial turn score so they can only roll again
-        else if (needsInitialScore && haveSelected) {
+        else if (needsInitialScore && haveSelected && noErrors) {
             return ACTION_ROLL_AGAIN;
           }
 
@@ -32946,12 +32964,19 @@ var PlayerRoll = function (_React$Component) {
     value: function render() {
       var _this2 = this;
 
-      var selectedDieIndices = (0, _filters.filterRoll)(this.props.roll, this.props.selected).map(function (die) {
+      // get the dice for this roll
+      var selectedDieIndices = (0, _filters.filterRoll)(this.props.gameState.roll, this.props.gameState.selectedDie).map(function (die) {
         return die.index;
       });
-      var dice = this.props.value.map(function (value, ix) {
+
+      // now show the dice available
+      var dice = this.props.gameState.dice.map(function (value, ix) {
+        // check if this die is selected...
         var isSelected = (0, _lodash.indexOf)(selectedDieIndices, ix) > -1;
-        return _react2.default.createElement(_Die2.default, { key: ix, value: value, selected: isSelected,
+        var selectable = _this2.props.gameState.farkled === false ? true : false;
+
+        // return the Die component
+        return _react2.default.createElement(_Die2.default, { key: ix, value: value, selected: isSelected, selectable: selectable,
           onClick: function onClick(value) {
             return _this2.props.onClick({ value: value, index: ix });
           } });
@@ -33010,9 +33035,18 @@ var Die = function (_React$Component) {
       var _this2 = this;
 
       var dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+      var classNames = ['die'];
+      if (this.props.selected) {
+        classNames.push('selected');
+      }
+      if (this.props.selectable === false) {
+        classNames.push('disabled');
+      }
+
       return _react2.default.createElement(
         'button',
-        { className: this.props.selected ? 'die selected' : 'die', onClick: function onClick() {
+        { className: classNames.join(' '), onClick: function onClick() {
             return _this2.props.onClick(_this2.props.value);
           } },
         dice[this.props.value]
@@ -33050,6 +33084,9 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+/**
+ * Game scoreboard.
+ */
 var Scoreboard = function (_React$Component) {
   _inherits(Scoreboard, _React$Component);
 
@@ -33061,6 +33098,10 @@ var Scoreboard = function (_React$Component) {
 
   _createClass(Scoreboard, [{
     key: 'scoreItems',
+
+    /**
+     * Create the score items list.
+     */
     value: function scoreItems(items, key) {
       var index = 0;
       return items.map(function (turn) {
@@ -33080,6 +33121,7 @@ var Scoreboard = function (_React$Component) {
       var player1ScoreItems = this.scoreItems(this.props.score[1], 'player1');
       var player2ScoreItems = this.scoreItems(this.props.score[2], 'player2');
 
+      // calculate the player totals...
       var player1Total = this.props.score[1].reduce(function (carry, turn) {
         return carry + turn.score;
       }, 0);
@@ -33087,40 +33129,58 @@ var Scoreboard = function (_React$Component) {
         return carry + turn.score;
       }, 0);
 
+      var player1Winning = player1Total > player2Total ? '⭐️' : '';
+      var player2Winning = player1Total < player2Total ? '⭐️' : '';
+
       return _react2.default.createElement(
         'div',
         { className: 'scoreboard' },
         _react2.default.createElement(
-          'div',
-          { className: 'scoreboard--player' },
+          'header',
+          null,
           _react2.default.createElement(
-            'h3',
+            'h2',
             null,
-            'Player 1'
-          ),
-          _react2.default.createElement(
-            'ul',
-            null,
-            player1ScoreItems
-          ),
-          'Total: ',
-          player1Total
+            'Scoreboard'
+          )
         ),
         _react2.default.createElement(
           'div',
-          { className: 'scoreboard--player' },
+          { className: 'scores' },
           _react2.default.createElement(
-            'h3',
-            null,
-            'Player 2'
+            'div',
+            { className: 'scoreboard--player' },
+            _react2.default.createElement(
+              'h3',
+              null,
+              'Player 1 ',
+              player1Winning
+            ),
+            'Total: ',
+            player1Total,
+            _react2.default.createElement(
+              'ul',
+              null,
+              player1ScoreItems
+            )
           ),
           _react2.default.createElement(
-            'ul',
-            null,
-            player2ScoreItems
-          ),
-          'Total: ',
-          player2Total
+            'div',
+            { className: 'scoreboard--player' },
+            _react2.default.createElement(
+              'h3',
+              null,
+              'Player 2 ',
+              player2Winning
+            ),
+            'Total: ',
+            player2Total,
+            _react2.default.createElement(
+              'ul',
+              null,
+              player2ScoreItems
+            )
+          )
         )
       );
     }
@@ -33168,10 +33228,11 @@ var Messages = function (_React$Component) {
   _createClass(Messages, [{
     key: "render",
     value: function render() {
-      var messages = this.props.value.map(function (message) {
+      var messages = this.props.value.map(function (message, ix) {
+        var messageKey = "message" + ix;
         return _react2.default.createElement(
           "div",
-          { className: "message" },
+          { className: "message", key: messageKey },
           message
         );
       });

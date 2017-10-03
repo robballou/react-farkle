@@ -4,10 +4,13 @@ import {has} from 'lodash';
 import {
   dieCount,
   didFarkle,
+  getThreeOfAKind,
   hasThreeOfAKind,
+  hasSixOfAKind,
   hasThreeDoubles,
   isStraight,
-  score
+  score,
+  normalizeDice
 } from '../src/utils/score';
 
 test('correctly check if user farkled', t => {
@@ -50,6 +53,39 @@ test('dieCount()', t => {
 
   tests.forEach((testCase, ix) => {
     t.deepEqual(dieCount(testCase.die), testCase.counts, `Test case failed: ${ix}`);
+  });
+});
+
+test('getThreeOfAKind()', t => {
+  const tests = [
+    {
+      die: [1],
+      length: 0,
+    },
+    {
+      die: [1, 1],
+      length: 0,
+    },
+    {
+      die: [1, 1, 1],
+      length: 1,
+    },
+    {
+      die: [5, 5, 5],
+      length: 1,
+    },
+    {
+      die: [1, 1, 1, 2],
+      length: 1,
+    },
+    {
+      die: [1, 1, 1, 2, 2, 2],
+      length: 2,
+    },
+  ];
+
+  tests.forEach((testCase, ix) => {
+    t.is((getThreeOfAKind(testCase.die)).length, testCase.length, `Test case failed: ${ix}`);
   });
 });
 
@@ -96,6 +132,39 @@ test('hasThreeDoubles()', t => {
 
   tests.forEach((testCase, ix) => {
     t.is(hasThreeDoubles(testCase.die), testCase.result, `Test case failed: ${ix}`);
+  });
+});
+
+test('hasSixOfAKind()', t => {
+  const tests = [
+    {
+      die: [1],
+      result: false,
+    },
+    {
+      die: [1, 1],
+      result: false,
+    },
+    {
+      die: [1, 1, 1],
+      result: false,
+    },
+    {
+      die: [5, 5, 5],
+      result: false,
+    },
+    {
+      die: [1, 1, 1, 2, 2, 2],
+      result: false,
+    },
+    {
+      die: [1, 1, 1, 1, 1, 1],
+      result: true,
+    },
+  ];
+
+  tests.forEach((testCase, ix) => {
+    t.is(hasSixOfAKind(testCase.die), testCase.result, `Test case failed: ${ix}`);
   });
 });
 
@@ -437,6 +506,11 @@ test('score() for a straight', t => {
   });
 });
 
+/**
+ * Checks if score() accounts for multiple rolls
+ *
+ * E.g. score each roll separately, not together.
+ */
 test('score() with multiple rolls', t => {
   [
     {
@@ -459,6 +533,19 @@ test('score() with multiple rolls', t => {
     const s = score(testCase.selected);
     t.is(s.score, testCase.score);
   });
+});
+
+test('score() handles 1-1-5-5-5-1 correctly', t => {
+  const selected = [
+    {value: 1, roll: 1},
+    {value: 1, roll: 1},
+    {value: 5, roll: 1},
+    {value: 5, roll: 1},
+    {value: 5, roll: 1},
+    {value: 1, roll: 1},
+  ];
+  const s = score(selected);
+  t.is((score(selected)).score, 2500);
 });
 
 test('score() result has a .farkled property', t => {

@@ -65,3 +65,28 @@ test('Actions.getActions() returns ACTION_ROLL_AGAIN_NEXT if the player has met 
 
   t.is(a.getActions(state), 'ROLL_AGAIN_NEXT');
 });
+
+test('Actions.getActions() returns ACTION_NONE if the player has selected non-scoring items', t => {
+  const state = merge(g.getState(), {
+    dice: [3,3,2,2,4],
+    selectedDie: [
+      {roll: 1, value: 2},
+    ],
+    turnScore: {
+      errors: [{value: 2}],
+      items: [],
+      score: 0,
+      farkled: false,
+    },
+    scoreboard: {
+      1: [],
+      2: []
+    },
+  });
+
+  // getActions() calls needsInitialTurnScore which requires the rules to
+  // be processed, so do that now...
+  const [passedRules, ruleResults] = verifyRules(g.rules.select, state);
+  state.ruleResults.select = {passed: passedRules, results: ruleResults};
+  t.is(a.getActions(state), null);
+});

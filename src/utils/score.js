@@ -42,6 +42,9 @@ function turnScoreObject() {
   return {score: 0, items: [], errors: [], farkled: false};
 }
 
+/**
+ * Score multiple rolls.
+ */
 export function score(allDiceRolls) {
   const rolls = groupBy(allDiceRolls, (die) => (isNumber(die)) ? 0 : die.roll);
   const thisScore = turnScoreObject();
@@ -115,7 +118,8 @@ export function scoreSpecials(dice) {
 
   // in a nutshell, we need to check for special value scores starting at the
   // high scoring varieties down to the lower scoring ones...
-  if (diceValues.length === 6) {
+  const diceValuesLength = diceValues.length;
+  if (diceValuesLength === 6) {
     // check for six of a kind = 4x the 3-of-a-kind score.
     if (hasSixOfAKind(diceValues)) {
       const sixOfAKind = keys(pickBy(counts, (v) => v === 6));
@@ -125,6 +129,12 @@ export function scoreSpecials(dice) {
         thisDice = [];
         specialScore += itemScore;
       }
+    }
+    // two triples = 2500
+    else if ((getThreeOfAKind(diceValues)).length === 2) {
+      scoreItems.push({dice: diceValues, score: 2500});
+      thisDice = [];
+      specialScore += 2500;
     }
     // straight = 1000
     else if (isStraight(diceValues)) {
@@ -139,31 +149,32 @@ export function scoreSpecials(dice) {
     }
   }
 
-  if (diceValues.length >= 5) {
-    const fiveOfAKind = getFiveOfAKind(diceValues);
-    fiveOfAKind.forEach((quin) => {
-      scoreItems.push({dice: [quin, quin, quin, quin, quin], score: threeOfAKindScores[quin] * 3});
-      thisDice = thisDice.filter((die) => die.value != quin);
-      specialScore += threeOfAKindScores[quin] * 3;
-    });
-  }
+  if (thisDice.length > 0) {
+    if (diceValuesLength >= 5) {
+      const fiveOfAKind = getFiveOfAKind(diceValues);
+      fiveOfAKind.forEach((quin) => {
+        scoreItems.push({dice: [quin, quin, quin, quin, quin], score: threeOfAKindScores[quin] * 3});
+        thisDice = thisDice.filter((die) => die.value != quin);
+        specialScore += threeOfAKindScores[quin] * 3;
+      });
+    }
+    if (diceValuesLength >= 4) {
+      const fourOfAKind = getFourOfAKind(diceValues);
+      fourOfAKind.forEach((quad) => {
+        scoreItems.push({dice: [quad, quad, quad, quad], score: threeOfAKindScores[quad] * 2});
+        thisDice = thisDice.filter((die) => die.value != quad);
+        specialScore += threeOfAKindScores[quad] * 2;
+      });
+    }
 
-  if (diceValues.length >= 4) {
-    const fourOfAKind = getFourOfAKind(diceValues);
-    fourOfAKind.forEach((quad) => {
-      scoreItems.push({dice: [quad, quad, quad, quad], score: threeOfAKindScores[quad] * 2});
-      thisDice = thisDice.filter((die) => die.value != quad);
-      specialScore += threeOfAKindScores[quad] * 2;
-    });
-  }
-
-  if (diceValues.length >= 3) {
-    const threeOfAKind = getThreeOfAKind(diceValues);
-    threeOfAKind.forEach((triple) => {
-      scoreItems.push({dice: [triple, triple, triple], score: threeOfAKindScores[triple]});
-      thisDice = thisDice.filter((die) => die.value != triple);
-      specialScore += threeOfAKindScores[triple];
-    });
+    if (diceValuesLength >= 3) {
+      const threeOfAKind = getThreeOfAKind(diceValues);
+      threeOfAKind.forEach((triple) => {
+        scoreItems.push({dice: [triple, triple, triple], score: threeOfAKindScores[triple]});
+        thisDice = thisDice.filter((die) => die.value != triple);
+        specialScore += threeOfAKindScores[triple];
+      });
+    }
   }
 
   return [specialScore, scoreItems, thisDice];
@@ -181,7 +192,7 @@ export function hasScoringSingleDie(die) {
 export function getNumberOfAKind(dice, n) {
   const counts = dieCount(dice);
   return keys(pickBy(counts, (count) => count === n))
-    .map(parseInt);
+    .map((num) => parseInt(num));
 }
 
 export function getThreeOfAKind(dice) {

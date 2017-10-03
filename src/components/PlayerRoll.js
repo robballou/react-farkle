@@ -9,10 +9,17 @@ import {filterRoll} from '../utils/filters';
  */
 export default class PlayerRoll extends React.Component {
   render() {
-    const selectedDieIndices = filterRoll(this.props.roll, this.props.selected).map((die) => die.index);
-    const dice = this.props.value.map((value, ix) => {
+    // get the dice for this roll
+    const selectedDieIndices = filterRoll(this.props.gameState.roll, this.props.gameState.selectedDie).map((die) => die.index);
+
+    // now show the dice available
+    const dice = this.props.gameState.dice.map((value, ix) => {
+      // check if this die is selected...
       const isSelected = indexOf(selectedDieIndices, ix) > -1;
-      return <Die key={ix} value={value} selected={isSelected}
+      const selectable = (this.props.gameState.farkled === false) ? true : false;
+
+      // return the Die component
+      return <Die key={ix} value={value} selected={isSelected} selectable={selectable}
         onClick={(value) => this.props.onClick({value, index: ix})}  />;
     });
 
