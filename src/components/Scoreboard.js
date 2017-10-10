@@ -28,15 +28,21 @@ export default class Scoreboard extends React.Component {
     const player1Winning = (player1Total > player2Total) ? '⭐️' : '';
     const player2Winning = (player1Total < player2Total) ? '⭐️' : '';
 
+    const player1Won = (this.props.score.winning == 1) ? 'winning' : '';
+    const player2Won = (this.props.score.winning == 2) ? 'winning' : '';
+
+    const player1Class = ['scoreboard--player', player1Won].filter((value) => value !== '').join(' ');
+    const player2Class = ['scoreboard--player', player2Won].filter((value) => value !== '').join(' ');
+
     return <div className="scoreboard">
         <header><h2>Scoreboard</h2></header>
         <div className="scores">
-          <div className="scoreboard--player">
+          <div className={player1Class}>
             <h3>Player 1 {player1Winning}</h3>
             Total: {player1Total}
             <ul>{player1ScoreItems}</ul>
           </div>
-          <div className="scoreboard--player">
+          <div className={player2Class}>
             <h3>Player 2 {player2Winning}</h3>
             Total: {player2Total}
             <ul>{player2ScoreItems}</ul>

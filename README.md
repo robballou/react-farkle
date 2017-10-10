@@ -22,3 +22,18 @@ Currently has:
 ## Gif it
 
 ![example gameplay](./farkle.gif)
+
+Currently game includes:
+
+* Basic scoring rules
+* A two player game
+* Some error handling around selecting incorrect dice
+* Stateful buttons related to actions the player can take, etc.
+* An indicator for whether a player is winning currently
+
+Still needed:
+
+* A means of determining the winner and ending the game when someone wins
+* Restarting the game
+* Allowing a different number of players
+* Better UI design and UX tweaks (responsive design considerations, select all die, deselect all die, show scoring options etc)

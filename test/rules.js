@@ -3,6 +3,7 @@ import test from 'ava';
 import {passedRule} from '../src/utils/filters';
 import RuleResult from '../src/lib/RuleResult';
 import InitialTurn500 from '../src/rules/InitialTurn500';
+import Win from '../src/rules/Win';
 
 test('InitialTurn500 requires 500 points on first turn...', t => {
   const initialTurn = new InitialTurn500();
@@ -98,4 +99,68 @@ test('passedRule() returns a rule value', t => {
     ]),
     true
   );
+});
+
+test('Win returns true when the player score is over 10000', t => {
+  const initialTurn = new Win();
+  const verify = initialTurn.verify.bind(initialTurn);
+
+  [
+    {
+      state: {
+        currentPlayer: 1,
+        scoreboard: {
+          1: [],
+          2: [],
+        },
+        turnScore: 0,
+      },
+      result: false
+    },
+    {
+      state: {
+        currentPlayer: 1,
+        dice: [3,3,2,2,4],
+        selectedDie: [
+          {roll: 1, value: 1},
+        ],
+        turnScore: {
+          errors: [],
+          items: [{dice: [1], score: 100}],
+          score: 100,
+          farkled: false,
+        },
+        scoreboard: {
+          1: [],
+          2: []
+        },
+      },
+      result: false,
+    },
+    {
+      state: {
+        currentPlayer: 1,
+        dice: [3,3,2,2,4],
+        selectedDie: [
+          {roll: 1, value: 1},
+        ],
+        turnScore: {
+          errors: [],
+          items: [{dice: [1], score: 100}],
+          score: 100,
+          farkled: false,
+        },
+        scoreboard: {
+          1: [{
+            score: 10050,
+          }],
+          2: []
+        },
+      },
+      result: true,
+    }
+  ].forEach((testCase, ix) => {
+    const thisResult = verify(testCase.state, []);
+    t.is(thisResult.passed, testCase.result, `Test #${ix} failed`);
+  });
 });

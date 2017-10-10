@@ -22,7 +22,7 @@ button.die {
   margin: 0 1em 0 0; }
 
 button.die.selected {
-  background: yellow; }
+  background-color: yellow; }
 
 button.die.disabled {
   color: #999; }
@@ -67,6 +67,8 @@ pre {
     border-top: 1px solid #333;
     border-bottom: 1px solid #333;
     padding: 0.5em; }
+  .scores .scoreboard--player.winning {
+    background-color: yellow; }
   .scores .scoreboard--player:last-child {
     border-right: 1px solid #333; }
 

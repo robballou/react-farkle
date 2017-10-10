@@ -14,6 +14,11 @@
     border-bottom: 1px solid #333;
     padding: 0.5em;
   }
+
+  .scoreboard--player.winning {
+    background-color: yellow;
+  }
+
   .scoreboard--player:last-child {
     border-right: 1px solid #333;
   }

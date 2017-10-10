@@ -2,9 +2,11 @@ button.die {
   margin: 0 1em 0 0 ;
 }
 
-button.die.selected {
-  background: yellow;
-}
-button.die.disabled {
-  color: #999;
+button.die {
+  &.selected {
+    background-color: yellow;
+  }
+  &.disabled {
+    color: #999;
+  }
 }

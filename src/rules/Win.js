@@ -1,7 +1,11 @@
 import Rule from '../lib/Rule';
 
-export default class Win {
+/**
+ * Figure out if the player has won.
+ */
+export default class Win extends Rule {
   verify(state, dice) {
-    return this.result('Win', state.turnScore != 0 && state.turnScore > 10000);
+    const currentPlayerScore = state.scoreboard[state.currentPlayer].reduce((sum, value) => sum + value.score, 0);
+    return this.result('Win', currentPlayerScore >= 5000);
   }
 }

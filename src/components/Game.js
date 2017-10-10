@@ -110,12 +110,16 @@ export default class Game extends React.Component {
       scoreboard: {
         1: [],
         2: [],
+        winning: null,
       },
 
       log: [],
     };
   }
 
+  /**
+   * Add an action to the log.
+   */
   log(action, object) {
     const objectItems = ['dice', 'selectedDie',];
     const thisObject = pick(object, objectItems);
@@ -133,10 +137,20 @@ export default class Game extends React.Component {
     const next = (this.state.currentPlayer == 1) ? 2 : 1;
 
     // add the player's score to the overall scoreboard...
+    const scoreboard = this.state.scoreboard;
     if (this.state.turnScore !== 0 && this.state.turnScore.farkled === false) {
-      const scoreboard = this.state.scoreboard;
       scoreboard[this.state.currentPlayer].push(this.state.turnScore);
     }
+
+    const [passedRules, ruleResults] = verifyRules(this.rules.nextPlayer, this.state);
+    this.state.ruleResults = this.updateRuleResults('nextPlayer', passedRules, ruleResults);
+    const won = passedRule('Win', ruleResults) === true;
+
+    // if the player won, update the state...
+    if (won) {
+      scoreboard.winning = this.state.currentPlayer;
+    }
+
     this.state.currentPlayer = next;
 
     // update the state...
