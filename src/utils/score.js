@@ -1,6 +1,13 @@
 import {isEqual, pickBy, toPairs, clone, concat, isNumber, keys, groupBy, forIn} from 'lodash';
 
 /**
+ * Sum the score from the scoreboard.
+ */
+export function calculateScore(scoreboard) {
+  return scoreboard.reduce((carry, turn) => carry + turn.score, 0);
+}
+
+/**
  * Check if the player "farkled" (e.g. has no scoring die in a roll)
  */
 export function didFarkle(dice) {

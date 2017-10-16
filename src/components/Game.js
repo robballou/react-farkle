@@ -16,6 +16,7 @@ import {verifyRules} from '../utils/game';
 
 import {
   score,
+  calculateScore
 } from '../utils/score';
 
 import Farkled from '../rules/Farkled';
@@ -132,6 +133,9 @@ export default class Game extends React.Component {
 
   /**
    * Accept the score and move to the next player.
+   *
+   * This also needs to account for the winning state. Once one player is marked
+   * as winning, other players have one turn to surpass their score.
    */
   nextPlayer() {
     const next = (this.state.currentPlayer == 1) ? 2 : 1;
@@ -142,20 +146,53 @@ export default class Game extends React.Component {
       scoreboard[this.state.currentPlayer].push(this.state.turnScore);
     }
 
+    // check if "next" rules, including checking if the player is now winning
     const [passedRules, ruleResults] = verifyRules(this.rules.nextPlayer, this.state);
     this.state.ruleResults = this.updateRuleResults('nextPlayer', passedRules, ruleResults);
     const won = passedRule('Win', ruleResults) === true;
 
-    // if the player won, update the state...
-    if (won) {
-      scoreboard.winning = this.state.currentPlayer;
+    // updateWinningPlayer() returns true if the game is over
+    if (this.updateWinningPlayer(scoreboard, won, next)) {
+      this.setState({messages: [`Player ${scoreboard.winning} has won`]});
+      return;
     }
 
+    // continue the game with the next player
     this.state.currentPlayer = next;
 
     // update the state...
     const newState = merge(this.getState(), pick(this.state, ['scoreboard', 'currentPlayer', 'log']));
     this.setState(this.log('nextPlayer', newState));
+  }
+
+  /**
+   * Update the winning player in the game state and determine if the game has ended.
+   */
+  updateWinningPlayer(scoreboard, won, next) {
+    // is the winning player next?
+    const winningPlayerIsNext = (next == scoreboard.winning);
+
+    // if the player won, update the state... but we need to check if another
+    // player is already winning. If another player is winning, the higher score
+    // wins and the game ends.
+    if (won) {
+      if (scoreboard.winning != null) {
+        // get the score for the current winning player
+        const winningScore = calculateScore(scoreboard[scoreboard.winning]);
+        const currentPlayerScore = calculateScore(scoreboard[this.state.currentPlayer]);
+
+
+        // now the current player is winning
+        if (currentPlayerScore > winningScore) {
+          scoreboard.winning = this.state.currentPlayer;
+        }
+      }
+      else {
+        scoreboard.winning = this.state.currentPlayer;
+      }
+    }
+
+    return winningPlayerIsNext;
   }
 
   /**

@@ -1,4 +1,5 @@
 import React from 'react';
+import {calculateScore} from '../utils/score';
 
 /**
  * Game scoreboard.
@@ -22,8 +23,8 @@ export default class Scoreboard extends React.Component {
     const player2ScoreItems = this.scoreItems(this.props.score[2], 'player2');
 
     // calculate the player totals...
-    const player1Total = this.props.score[1].reduce((carry, turn) => carry + turn.score, 0);
-    const player2Total = this.props.score[2].reduce((carry, turn) => carry + turn.score, 0);
+    const player1Total = calculateScore(this.props.score[1]);
+    const player2Total = calculateScore(this.props.score[2]);
 
     const player1Winning = (player1Total > player2Total) ? '⭐️' : '';
     const player2Winning = (player1Total < player2Total) ? '⭐️' : '';

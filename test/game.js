@@ -48,3 +48,32 @@ test('game.nextPlayer() adds the players score to the scoreboard', t => {
   // player one should now have an item in their scoreboard...
   t.is(myGame.state.scoreboard[1].length, 1);
 });
+
+test('game.nextPlayer() ends the game after the last players turn', t => {
+  const g = shallow(<Game />);
+  const myGame = g.instance();
+
+  myGame.state = merge(myGame.state, {
+    currentPlayer: 2,
+    dice: [1,1,1,4,5,2],
+    selectedDie: [{value: 1, roll: 1}, {value: 1, roll: 1}, {value: 1, roll: 1}],
+    turnScore: {
+      score: 100,
+      items: [{dice: [1,1,1], score: 100}],
+      errors: [],
+      farkled: false
+    },
+    scoreboard: {
+      winning: 1,
+      1: [{
+        score: 10000
+      }],
+      2: []
+    }
+  });
+
+  myGame.nextPlayer();
+
+  t.is(myGame.state.messages.length, 1);
+  t.is(myGame.state.scoreboard.winning, 1);
+})
